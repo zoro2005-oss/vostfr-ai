@@ -1,0 +1,26 @@
+# Node
+node_modules/
+dist/
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+!*.env.example
+
+# Local database & uploads
+backend/.pgdata/
+backend/storage/
+
+# Logs / misc
+*.log
+.DS_Store
