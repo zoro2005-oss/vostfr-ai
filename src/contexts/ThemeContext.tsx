@@ -6,7 +6,7 @@ type Origin = { x: number; y: number };
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: (origin?: Origin) => void;
-  setTheme: (theme: Theme) => void;
+  setTheme: (theme: Theme, options?: { instant?: boolean }) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -74,8 +74,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(next);
   };
 
-  const setTheme = (next: Theme) => {
-    runThemeTransition(next);
+  const setTheme = (next: Theme, options?: { instant?: boolean }) => {
+    if (options?.instant) {
+      applyTheme(next);
+    } else {
+      runThemeTransition(next);
+    }
     setThemeState(next);
   };
 

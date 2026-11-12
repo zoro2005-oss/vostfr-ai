@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Download, Play } from 'lucide-react';
+import { Search, Download, Play, MoreVertical, Trash2 } from 'lucide-react';
 import type { Project } from '../types';
 import { api, endpoints, getApiError } from '../services/api';
 import { projectName } from '../utils/slug';
@@ -20,6 +20,8 @@ export default function History() {
   const [filter, setFilter] = useState<Filter>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [openMenu, setOpenMenu] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -33,6 +35,22 @@ export default function History() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (openMenu === null) return;
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!(event.target as HTMLElement).closest('.row-menu-wrap')) setOpenMenu(null);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpenMenu(null);
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [openMenu]);
+
   const filtered = projects.filter((project) => {
     const search = query.trim().toLowerCase();
     const matchesQuery = !search || project.title.toLowerCase().includes(search) || project.filename.toLowerCase().includes(search);
@@ -43,6 +61,7 @@ export default function History() {
   });
 
   async function download(project: Project) {
+    setOpenMenu(null);
     try {
       const response = await api.get(endpoints.download(project.id), {
         params: { format: 'srt' },
@@ -56,6 +75,20 @@ export default function History() {
       URL.revokeObjectURL(url);
     } catch (err) {
       setError(getApiError(err));
+    }
+  }
+
+  async function remove(project: Project) {
+    setOpenMenu(null);
+    if (!window.confirm(`Supprimer « ${project.title} » ? Cette action est irréversible.`)) return;
+    setDeletingId(project.id);
+    try {
+      await api.delete(endpoints.delete(project.id));
+      setProjects((current) => current.filter((item) => item.id !== project.id));
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -87,7 +120,25 @@ export default function History() {
               {isProgress && <div className="progress-track"><span className="progress-fill" style={{ width: `${project.progress}%` }}/></div>}
               {isProgress && <span className="percent">{project.progress}%</span>}
             </div>
-            <button className="round-download" onClick={() => download(project)} disabled={!isDone} aria-label={`Télécharger le SRT de ${project.title}`}><Download size={17}/></button>
+            <div className="row-menu-wrap">
+              <button
+                className="round-menu"
+                onClick={() => setOpenMenu(openMenu === project.id ? null : project.id)}
+                aria-label={`Actions pour ${project.title}`}
+                aria-haspopup="menu"
+                aria-expanded={openMenu === project.id}
+              >
+                <MoreVertical size={18}/>
+              </button>
+              {openMenu === project.id && <div className="row-menu" role="menu">
+                <button className="row-menu-item" role="menuitem" onClick={() => download(project)} disabled={!isDone}>
+                  <Download size={15}/> Télécharger le SRT
+                </button>
+                <button className="row-menu-item danger" role="menuitem" onClick={() => remove(project)} disabled={deletingId === project.id}>
+                  <Trash2 size={15}/> {deletingId === project.id ? 'Suppression...' : 'Supprimer'}
+                </button>
+              </div>}
+            </div>
           </div>;
         })}
         {!loading && filtered.length === 0 && <p className="muted" style={{ textAlign: 'center', padding: 30 }}>{query ? 'Aucun projet ne correspond à cette recherche.' : 'Aucun projet pour le moment.'}</p>}

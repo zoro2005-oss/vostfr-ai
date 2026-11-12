@@ -8,6 +8,7 @@ import History from './pages/History';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Maquette from './pages/Maquette';
 
 function RequireAuth() {
   return localStorage.getItem('vostfr_token') ? <Layout /> : <Navigate to="/login" replace />;
@@ -16,6 +17,7 @@ function RequireAuth() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/maquette" element={<Maquette />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route element={<RequireAuth />}>
