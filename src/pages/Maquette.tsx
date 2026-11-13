@@ -38,7 +38,7 @@ const recentProjects = [
 ];
 
 const navItems = [
-  ['/', 'Tableau de bord', LayoutDashboard, true],
+  ['/dashboard', 'Tableau de bord', LayoutDashboard, true],
   ['/new', 'Nouvelle traduction', UploadCloud, false],
   ['/translations', 'Mes traductions', Film, false],
   ['/history', 'Historique', History, false],
@@ -46,7 +46,7 @@ const navItems = [
 ] as const;
 
 const mobileNav = [
-  ['/', 'Accueil', LayoutDashboard],
+  ['/dashboard', 'Accueil', LayoutDashboard],
   ['/new', 'Traduire', UploadCloud],
   ['/translations', 'Mes films', Film]
 ] as const;
@@ -131,7 +131,7 @@ export default function Maquette() {
 
         <div className="demo-ribbon">
           <span>Maquette interactive · données fictives</span>
-          <Link to="/">Accéder à mon espace <ArrowRight size={14}/></Link>
+          <Link to="/dashboard">Accéder à mon espace <ArrowRight size={14}/></Link>
         </div>
 
         <div className="demo-content">

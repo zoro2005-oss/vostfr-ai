@@ -93,6 +93,6 @@ export default function NewTranslation() {
         {!file && <small className="disabled-hint">Ajoutez une vidéo pour continuer</small>}
       </section>
     </div>
-    <Link to="/" className="back-link">← Retour au tableau de bord</Link>
+    <Link to="/dashboard" className="back-link">← Retour au tableau de bord</Link>
   </div>;
 }

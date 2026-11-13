@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { LayoutDashboard, UploadCloud, Film, History, Settings, LogOut, Search, Bell, Sun, Moon } from 'lucide-react';
 import Logo from './Logo';
@@ -6,7 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { clearSession, getStoredUser } from '../services/api';
 
 const items = [
-  ['/', 'Tableau de bord', LayoutDashboard],
+  ['/dashboard', 'Tableau de bord', LayoutDashboard],
   ['/new', 'Nouvelle traduction', UploadCloud],
   ['/translations', 'Mes traductions', Film],
   ['/history', 'Historique', History],
@@ -14,7 +14,7 @@ const items = [
 ] as const;
 
 const mobileTabs = [
-  ['/', 'Accueil', LayoutDashboard],
+  ['/dashboard', 'Accueil', LayoutDashboard],
   ['/new', 'Traduire', UploadCloud],
   ['/translations', 'Mes films', Film]
 ] as const;
@@ -33,9 +33,20 @@ export default function Layout({ children }: { children?: ReactNode }) {
     .map((part) => part[0]?.toUpperCase())
     .join('') || '?';
 
+  const [confirmLogout, setConfirmLogout] = useState(false);
+
+  useEffect(() => {
+    if (!confirmLogout) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setConfirmLogout(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [confirmLogout]);
+
   const logout = () => {
     clearSession();
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   return <div className="app-shell">
@@ -49,7 +60,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
         <span className="dot online" />
       </div>
       <nav aria-label="Navigation principale">
-        {items.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+        {items.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
           <Icon size={18}/><span>{label}</span>{label === 'Nouvelle traduction' && <span className="shortcut">⌘ K</span>}
         </NavLink>)}
       </nav>
@@ -59,7 +70,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
           <div className="meter"><i style={{ width: '0%' }}/></div>
           <small>Aucun fichier stocké</small>
         </div>
-        <button className="nav-item logout" onClick={logout}><LogOut size={18}/>Déconnexion</button>
+        <button className="nav-item logout" onClick={() => setConfirmLogout(true)}><LogOut size={18}/>Déconnexion</button>
       </div>
     </aside>
     <main className="main">
@@ -75,9 +86,26 @@ export default function Layout({ children }: { children?: ReactNode }) {
       <div className="content">{children || <Outlet />}</div>
     </main>
     <nav className="mobile-tabs" aria-label="Navigation mobile">
-      {mobileTabs.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => isActive ? 'mobile-tab active' : 'mobile-tab'}>
+      {mobileTabs.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) => isActive ? 'mobile-tab active' : 'mobile-tab'}>
         <Icon size={22}/><span>{label}</span>
       </NavLink>)}
     </nav>
+
+    {confirmLogout && <div
+      className="confirm-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setConfirmLogout(false);
+      }}
+    >
+      <div className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="logout-title" aria-describedby="logout-desc">
+        <span className="confirm-icon"><LogOut size={22}/></span>
+        <h3 id="logout-title">Se déconnecter ?</h3>
+        <p id="logout-desc">Vous allez être redirigé vers la page d’accueil. Voulez-vous vraiment vous déconnecter ?</p>
+        <div className="confirm-actions">
+          <button className="button secondary" onClick={() => setConfirmLogout(false)}>Annuler</button>
+          <button className="button danger" onClick={logout}>Se déconnecter</button>
+        </div>
+      </div>
+    </div>}
   </div>;
 }

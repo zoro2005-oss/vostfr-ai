@@ -16,7 +16,7 @@ export default function Register() {
 
   useEffect(() => {
     if (localStorage.getItem('vostfr_token')) {
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [navigate]);
 
@@ -35,7 +35,7 @@ export default function Register() {
         password
       });
       saveSession(data);
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(getApiError(err));
     } finally {

@@ -121,7 +121,7 @@ export default function Result() {
   return <>
     <div className="result-top">
       <div>
-        <Link to="/" className="back-link"><ArrowLeft size={15}/> Tableau de bord</Link>
+        <Link to="/dashboard" className="back-link"><ArrowLeft size={15}/> Tableau de bord</Link>
         <h2>{loading ? 'Chargement...' : project?.title || 'Aucun projet'}</h2>
         <p className="muted">{project ? `${project.filename} · ${project.date}` : 'Aucune traduction disponible'}</p>
       </div>

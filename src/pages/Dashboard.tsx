@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles, Play, TrendingUp } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ArrowRight, CheckCircle2, Download, Play, Sparkles, TrendingUp } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import ProjectTable from '../components/ProjectTable';
 import type { Project } from '../types';
@@ -13,16 +12,28 @@ function durationInMinutes(duration?: string) {
   return hours * 60 + minutes + seconds / 60;
 }
 
-function lastSevenMonths() {
-  const now = new Date();
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - (6 - index), 1);
-    return {
-      key: `${date.getFullYear()}-${date.getMonth()}`,
-      name: date.toLocaleDateString('fr-FR', { month: 'short' })
-    };
-  });
-}
+const statusRows = (projects: Project[]) => [
+  {
+    key: 'done',
+    label: 'Terminés',
+    count: projects.filter((project) => ['Terminé', 'completed'].includes(project.status)).length
+  },
+  {
+    key: 'processing',
+    label: 'En cours',
+    count: projects.filter((project) => ['En cours', 'processing'].includes(project.status)).length
+  },
+  {
+    key: 'waiting',
+    label: 'En attente',
+    count: projects.filter((project) => ['En attente', 'pending'].includes(project.status)).length
+  },
+  {
+    key: 'error',
+    label: 'Erreurs',
+    count: projects.filter((project) => ['Erreur', 'error'].includes(project.status)).length
+  }
+];
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -40,22 +51,15 @@ export default function Dashboard() {
     return () => { active = false; };
   }, []);
 
-  const completed = projects.filter((project) => project.status === 'Terminé');
-  const totalMinutes = Math.round(completed.reduce((total, project) => total + durationInMinutes(project.duration), 0));
-
-  const chart = useMemo(() => {
-    const months = lastSevenMonths();
-    const values = new Map(months.map((month) => [month.key, { ...month, v: 0 }]));
-    for (const project of projects) {
-      if (!project.created_at) continue;
-      const date = new Date(project.created_at);
-      const item = values.get(`${date.getFullYear()}-${date.getMonth()}`);
-      if (item) item.v += Math.round(durationInMinutes(project.duration));
-    }
-    return Array.from(values.values());
-  }, [projects]);
-
-  const chartTotal = chart.reduce((total, item) => total + item.v, 0);
+  const rows = statusRows(projects);
+  const total = projects.length;
+  const safeTotal = total || 1;
+  const done = rows[0].count;
+  const totalMinutes = Math.round(
+    projects
+      .filter((project) => ['Terminé', 'completed'].includes(project.status))
+      .reduce((sum, project) => sum + durationInMinutes(project.duration), 0)
+  );
 
   return <>
     <div className="hero-row">
@@ -68,16 +72,52 @@ export default function Dashboard() {
     </div>
     {error && <p style={{ color: '#ff8298', fontSize: 12, marginBottom: 18 }}>{error}</p>}
     <div className="stats-grid">
-      <StatCard icon="film" label="Vidéos traitées" value={String(projects.length)} delta="0%"/>
-      <StatCard icon="languages" label="Traductions réalisées" value={String(completed.length)} delta="0%"/>
-      <StatCard icon="file" label="Fichiers SRT générés" value={String(completed.length)} delta="0%"/>
+      <StatCard icon="film" label="Vidéos traitées" value={String(total)} delta="0%"/>
+      <StatCard icon="languages" label="Traductions réalisées" value={String(done)} delta="0%"/>
+      <StatCard icon="file" label="Fichiers SRT générés" value={String(done)} delta="0%"/>
       <StatCard icon="clock" label="Minutes traitées" value={String(totalMinutes)} delta="0%"/>
     </div>
     <div className="dashboard-grid">
-      <section className="panel chart-panel">
-        <div className="panel-heading"><div><h3>Activité de traduction</h3><p>Nombre de minutes traduites sur les 7 derniers mois</p></div><div className="chart-total"><strong>{chartTotal}</strong><span><TrendingUp size={12}/> 0%</span></div></div>
-        <div className="chart"><ResponsiveContainer width="100%" height={220}><AreaChart data={chart}><defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8a4df0" stopOpacity={.4}/><stop offset="100%" stopColor="#ff5aa5" stopOpacity={0}/></linearGradient><linearGradient id="stroke" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#a79bff"/><stop offset="100%" stopColor="#ff5aa5"/></linearGradient></defs><CartesianGrid vertical={false} stroke="rgba(255,255,255,.06)"/><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'rgba(235,235,245,.5)',fontSize:12}}/><Tooltip cursor={{stroke:'rgba(255,255,255,.16)'}} contentStyle={{background:'rgba(20,20,38,.92)',border:'1px solid rgba(255,255,255,.12)',borderRadius:14,color:'#fff',backdropFilter:'blur(20px)'}}/><Area type="monotone" dataKey="v" stroke="url(#stroke)" strokeWidth={3} fill="url(#fill)"/></AreaChart></ResponsiveContainer></div>
+      <section className="panel pipeline-panel">
+        <div className="panel-heading">
+          <div><h3>Pipeline de production</h3><p>Répartition de vos projets par statut</p></div>
+          <div className="pipeline-total"><strong>{total}</strong><span>projet{total > 1 ? 's' : ''}</span></div>
+        </div>
+
+        <div className="pipeline-bar" aria-hidden="true">
+          {total === 0
+            ? <span className="pipeline-seg empty" style={{ width: '100%' }}/>
+            : rows.filter((row) => row.count > 0).map((row) => (
+                <span
+                  key={row.key}
+                  className={`pipeline-seg ${row.key}`}
+                  style={{ width: `${(row.count / safeTotal) * 100}%` }}
+                />
+              ))}
+        </div>
+
+        <div className="pipeline-legend">
+          {rows.map((row) => (
+            <div key={row.key} className="pipeline-legend-row">
+              <span className={`pipeline-dot ${row.key}`}/>
+              <strong>{row.label}</strong>
+              <span className="pipeline-count">{row.count}</span>
+              <span className="pipeline-percent">{Math.round((row.count / safeTotal) * 100)} %</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="pipeline-footer">
+          <span className="pipeline-ready">
+            <CheckCircle2 size={15}/>
+            {done > 0 ? `${done} prêt${done > 1 ? 's' : ''} à télécharger` : 'Aucun fichier prêt pour le moment'}
+          </span>
+          <Link to="/history" className="text-link">
+            <Download size={14}/> Voir les fichiers
+          </Link>
+        </div>
       </section>
+
       <section className="panel quick-panel">
         <div className="panel-heading"><div><h3>Raccourcis</h3><p>Gagnez du temps sur vos actions</p></div></div>
         <Link to="/new" className="quick-link"><span className="quick-icon violet"><Play size={16} fill="currentColor"/></span><span><strong>Nouvelle traduction</strong><small>Importer une vidéo</small></span><ArrowRight size={16}/></Link>
