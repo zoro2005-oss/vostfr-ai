@@ -6,6 +6,8 @@ Le frontend attend un backend externe configuré avec `VITE_API_URL`.
 |---|---|---|
 | POST | `/api/auth/register` | Création de compte |
 | POST | `/api/auth/login` | Connexion et JWT |
+| POST | `/api/auth/forgot-password` | Envoi du lien de réinitialisation par email |
+| POST | `/api/auth/reset-password` | Réinitialisation via token reçu par email |
 | GET | `/api/auth/me` | Utilisateur courant |
 | POST | `/api/projects/upload` | Upload multipart vidéo |
 | GET | `/api/projects` | Liste des projets |

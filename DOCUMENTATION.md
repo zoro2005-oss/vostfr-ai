@@ -170,6 +170,8 @@ vostfr-ai/
 ### Authentification
 - `POST /api/auth/register` : crée l'utilisateur, hash bcrypt, renvoie un JWT
 - `POST /api/auth/login` : vérifie email/mot de passe, renvoie un JWT
+- `POST /api/auth/forgot-password` : génère un token aléatoire à usage unique (seule son empreinte SHA-256 est stockée), invalide les anciens liens et envoie l'email (SMTP)
+- `POST /api/auth/reset-password` : vérifie le token hashé, son expiration et son usage unique, puis met à jour le mot de passe
 - `GET /api/auth/me` : utilisateur courant
 - `PUT /api/auth/me` : mise à jour du nom complet
 - JWT signé avec `SECRET_KEY`, algorithme `HS256`, expiration `ACCESS_TOKEN_EXPIRE_MINUTES`
@@ -180,6 +182,7 @@ vostfr-ai/
 | Table | Colonnes principales |
 |---|---|
 | `users` | `id`, `full_name`, `email` (unique), `password_hash`, `created_at` |
+| `password_reset_tokens` | `id`, `user_id`, `token_hash` (unique), `expires_at`, `used_at`, `created_at` |
 | `projects` | `id`, `user_id`, `title`, `original_filename`, `video_path`, `duration`, `source_language`, `target_language`, `status`, `progress`, `created_at` |
 | `translations` | `id`, `project_id`, `original_text`, `translated_text`, `start_time`, `end_time`, `sequence_number` |
 | `subtitles` | `id`, `project_id`, `filename`, `file_path`, `format` (`srt`/`vtt`), `content`, `created_at` |
@@ -497,6 +500,15 @@ Fonctions `write_srt()` (ligne 181) et `write_vtt()` (ligne 193).
 | `GROQ_AUDIO_CHUNK_SECONDS` | `600` | Durée des morceaux audio (10 min) |
 | `TRANSLATION_API_URL` | *(vide)* | URL LibreTranslate |
 | `TRANSLATION_API_KEY` | *(vide)* | Clé LibreTranslate |
+| `FRONTEND_URL` | `http://localhost:5173` | Base des liens de réinitialisation envoyés par email |
+| `PASSWORD_RESET_EXPIRE_MINUTES` | `30` | Durée de validité du lien de réinitialisation |
+| `EXPOSE_RESET_URL` | `false` | Renvoie le lien de reset dans l'API sans SMTP (dev uniquement) |
+| `SMTP_HOST` | *(vide)* | Serveur SMTP (vide = lien écrit dans les logs backend) |
+| `SMTP_PORT` | `587` | Port SMTP |
+| `SMTP_USER` | *(vide)* | Identifiant SMTP |
+| `SMTP_PASSWORD` | *(vide)* | Mot de passe SMTP |
+| `SMTP_FROM` | `no-reply@vostfr.ai` | Expéditeur des emails |
+| `SMTP_TLS` | `true` | Active STARTTLS |
 
 > Ne jamais committer les vraies valeurs de `SECRET_KEY`, `GROQ_API_KEY` ou du mot de passe
 > PostgreSQL. Utiliser `.env` local et `.env.example` comme modèle.

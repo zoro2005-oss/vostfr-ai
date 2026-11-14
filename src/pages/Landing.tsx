@@ -122,7 +122,7 @@ export default function Landing() {
             </Link>
           </div>
           <p className="landing-note">
-            <CheckCircle2 size={14}/> Compte démo : demo@vostfr.ai / demo1234
+            <CheckCircle2 size={14}/> Inscription gratuite — aucune carte bancaire requise
           </p>
         </div>
 

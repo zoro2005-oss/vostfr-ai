@@ -8,6 +8,7 @@ import History from './pages/History';
 import Settings from './pages/Settings';
 import Maquette from './pages/Maquette';
 import Landing from './pages/Landing';
+import ResetPassword from './pages/ResetPassword';
 
 function isAuthenticated() {
   return Boolean(localStorage.getItem('vostfr_token'));
@@ -28,6 +29,7 @@ export default function App() {
       <Route path="/maquette" element={<Maquette />} />
       <Route path="/login" element={<Landing />} />
       <Route path="/register" element={<Landing />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<RequireAuth />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/new" element={<NewTranslation />} />

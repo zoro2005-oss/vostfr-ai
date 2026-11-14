@@ -61,7 +61,6 @@ export default function Login() {
           </button>
         </form>
         <p className="auth-switch">Pas encore de compte ? <Link to="/register">Créer un compte</Link></p>
-        <p className="muted" style={{ fontSize: 10, textAlign: 'center', marginTop: 18 }}>Compte démo : demo@vostfr.ai / demo1234</p>
       </div>
     </main>
   </div>;

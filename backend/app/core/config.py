@@ -20,6 +20,15 @@ class Settings(BaseSettings):
     GROQ_TRANSLATION_MODEL: str = "openai/gpt-oss-120b"
     GROQ_MAX_AUDIO_BYTES: int = 24 * 1024 * 1024
     GROQ_AUDIO_CHUNK_SECONDS: int = 300
+    FRONTEND_URL: str = "http://localhost:5173"
+    PASSWORD_RESET_EXPIRE_MINUTES: int = 30
+    EXPOSE_RESET_URL: bool = False
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "no-reply@vostfr.ai"
+    SMTP_TLS: bool = True
 
     class Config:
         env_file = ".env"

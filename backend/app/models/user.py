@@ -14,3 +14,6 @@ class User(Base):
 
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
     settings = relationship("Setting", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    password_reset_tokens = relationship(
+        "PasswordResetToken", back_populates="user", cascade="all, delete-orphan"
+    )

@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -21,6 +23,21 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
+
+def generate_password_reset_token() -> tuple[str, str]:
+    """Génère un token opaque aléatoire et son empreinte SHA-256.
+
+    Seule l'empreinte est stockée en base. Le token en clair n'existe que
+    dans le lien envoyé par email, il est impossible à deviner (256 bits)
+    et ne contient aucune donnée sur l'utilisateur.
+    """
+    raw_token = secrets.token_urlsafe(32)
+    return raw_token, hash_password_reset_token(raw_token)
+
+
+def hash_password_reset_token(raw_token: str) -> str:
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
 
 def decode_access_token(token: str):
     try:

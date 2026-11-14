@@ -30,6 +30,8 @@ api.interceptors.response.use(
 export const endpoints = {
   register: '/api/auth/register',
   login: '/api/auth/login',
+  forgotPassword: '/api/auth/forgot-password',
+  resetPassword: '/api/auth/reset-password',
   me: '/api/auth/me',
   updateMe: '/api/auth/me',
   upload: '/api/projects/upload',
