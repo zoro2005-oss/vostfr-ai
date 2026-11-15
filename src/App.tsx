@@ -9,10 +9,7 @@ import Settings from './pages/Settings';
 import Maquette from './pages/Maquette';
 import Landing from './pages/Landing';
 import ResetPassword from './pages/ResetPassword';
-
-function isAuthenticated() {
-  return Boolean(localStorage.getItem('vostfr_token'));
-}
+import { isAuthenticated } from './services/api';
 
 function RequireAuth() {
   return isAuthenticated() ? <Layout /> : <Navigate to="/login" replace />;

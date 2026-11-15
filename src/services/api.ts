@@ -6,7 +6,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('vostfr_token');
+  const token = sessionStorage.getItem('vostfr_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -17,8 +17,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('vostfr_token');
-      localStorage.removeItem('vostfr_user');
+      sessionStorage.removeItem('vostfr_token');
+      sessionStorage.removeItem('vostfr_user');
       if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
         window.location.href = '/login';
       }
@@ -44,24 +44,28 @@ export const endpoints = {
   delete: (id: number | string) => `/api/projects/${id}`
 };
 
+export function isAuthenticated() {
+  return Boolean(sessionStorage.getItem('vostfr_token'));
+}
+
 export function saveSession(data: AuthResponse) {
-  localStorage.setItem('vostfr_token', data.access_token);
+  sessionStorage.setItem('vostfr_token', data.access_token);
   if (data.user) {
-    localStorage.setItem('vostfr_user', JSON.stringify(data.user));
+    sessionStorage.setItem('vostfr_user', JSON.stringify(data.user));
   }
 }
 
 export function clearSession() {
-  localStorage.removeItem('vostfr_token');
-  localStorage.removeItem('vostfr_user');
+  sessionStorage.removeItem('vostfr_token');
+  sessionStorage.removeItem('vostfr_user');
 }
 
 export function saveStoredUser(user: { id: number; email: string; full_name?: string }) {
-  localStorage.setItem('vostfr_user', JSON.stringify(user));
+  sessionStorage.setItem('vostfr_user', JSON.stringify(user));
 }
 
 export function getStoredUser() {
-  const raw = localStorage.getItem('vostfr_user');
+  const raw = sessionStorage.getItem('vostfr_user');
   if (!raw) return null;
   try {
     return JSON.parse(raw) as { id: number; email: string; full_name?: string };

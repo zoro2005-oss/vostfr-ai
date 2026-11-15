@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, LoaderCircle, Lock, Mail, ShieldCheck, Sparkles } from 'lucide-react';
 import Logo from '../components/Logo';
-import { api, endpoints, getApiError, saveSession } from '../services/api';
+import { api, endpoints, getApiError, isAuthenticated, saveSession } from '../services/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -13,7 +13,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (localStorage.getItem('vostfr_token')) {
+    if (isAuthenticated()) {
       navigate('/dashboard', { replace: true });
     }
   }, [navigate]);

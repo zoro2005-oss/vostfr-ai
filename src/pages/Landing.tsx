@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import AuthModal from '../components/AuthModal';
+import { isAuthenticated } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 
 const features = [
@@ -67,7 +68,7 @@ export default function Landing() {
   }, [routeMode]);
 
   useEffect(() => {
-    if (authMode && localStorage.getItem('vostfr_token')) {
+    if (authMode && isAuthenticated()) {
       navigate('/dashboard', { replace: true });
     }
   }, [authMode, navigate]);

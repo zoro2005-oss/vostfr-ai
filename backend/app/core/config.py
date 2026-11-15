@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import List
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+psycopg://user:password@localhost:5432/vostfr_ai"
+    DATABASE_URL: str = "postgresql+psycopg://user:password@localhost:5433/vostfr_ai"
     SECRET_KEY: str = "change-me"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
     ALGORITHM: str = "HS256"

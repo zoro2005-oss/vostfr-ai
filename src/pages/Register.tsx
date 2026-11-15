@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, LoaderCircle, Lock, Mail, ShieldCheck, Sparkles, User } from 'lucide-react';
 import Logo from '../components/Logo';
-import { api, endpoints, getApiError, saveSession } from '../services/api';
+import { api, endpoints, getApiError, isAuthenticated, saveSession } from '../services/api';
 
 export default function Register() {
   const [fullName, setFullName] = useState('');
@@ -15,7 +15,7 @@ export default function Register() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (localStorage.getItem('vostfr_token')) {
+    if (isAuthenticated()) {
       navigate('/dashboard', { replace: true });
     }
   }, [navigate]);

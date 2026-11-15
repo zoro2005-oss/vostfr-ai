@@ -48,9 +48,65 @@ def send_password_reset_email(to_email: str, reset_url: str) -> None:
     message.set_content(
         "Bonjour,\n\n"
         "Vous avez demandé à réinitialiser votre mot de passe VOSTFR AI.\n"
-        f"Cliquez sur ce lien pour choisir un nouveau mot de passe :\n\n{reset_url}\n\n"
+        "Cliquez sur le bouton « Réinitialiser mon mot de passe » dans cet email.\n\n"
         f"Ce lien expire dans {settings.PASSWORD_RESET_EXPIRE_MINUTES} minutes.\n"
         "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n"
+    )
+    message.add_alternative(
+        f"""\
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Réinitialisation de votre mot de passe</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0f1115;font-family:Arial,Helvetica,sans-serif;color:#e6e8ee;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0f1115;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background-color:#171a21;border:1px solid #2a2f3a;border-radius:14px;padding:32px;">
+          <tr>
+            <td align="center" style="padding-bottom:8px;">
+              <span style="font-size:22px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">VOSTFR AI</span>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:8px 0 4px;">
+              <h1 style="margin:0;font-size:20px;font-weight:600;color:#ffffff;">Réinitialisation du mot de passe</h1>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:12px 0 24px;">
+              <p style="margin:0;font-size:14px;line-height:22px;color:#b6bcc9;">
+                Vous avez demandé à réinitialiser votre mot de passe VOSTFR AI.<br>
+                Cliquez sur le bouton ci-dessous pour en choisir un nouveau.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <a href="{reset_url}" target="_blank" rel="noopener"
+                 style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 28px;border-radius:10px;">
+                Réinitialiser mon mot de passe
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-bottom:16px;">
+              <p style="margin:0;font-size:13px;line-height:20px;color:#8b93a3;">
+                Ce lien expire dans {settings.PASSWORD_RESET_EXPIRE_MINUTES} minutes.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+""",
+        subtype="html",
     )
 
     try:
