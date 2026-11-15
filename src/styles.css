@@ -761,13 +761,13 @@ td{padding:12px;border-top:1px solid var(--glass-border);font-size:13px;color:va
   .button.full{height:56px}
   .translation-status{min-width:0}
   .mobile-tabs{
-    display:grid;grid-template-columns:repeat(3,1fr);
+    display:grid;grid-template-columns:repeat(4,1fr);
     position:fixed;left:20px;right:20px;bottom:22px;height:66px;padding:6px;
     border-radius:33px;background:rgba(30,30,52,.74);border:1px solid rgba(255,255,255,.13);
     backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);
     z-index:50;box-shadow:0 20px 50px -20px rgba(0,0,0,.9);
   }
-  .mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:24px;color:var(--text-2);text-decoration:none;font-size:10.5px;font-weight:600}
+  .mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:24px;color:var(--text-2);text-decoration:none;font-size:10.5px;font-weight:600;border:0;background:transparent;cursor:pointer;font-family:inherit}
   .mobile-tab svg{width:22px;height:22px}
   .mobile-tab.active{color:#fff;background:rgba(255,255,255,.15)}
   .auth-page{display:block;min-height:100vh;padding:0}

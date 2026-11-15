@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, UploadCloud, Film, History, Settings, LogOut, Search, Bell, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, UploadCloud, Film, History, Settings, LogOut, Search, Bell, Sun, Moon, Home } from 'lucide-react';
 import Logo from './Logo';
 import { useTheme } from '../contexts/ThemeContext';
 import { clearSession, getStoredUser } from '../services/api';
@@ -14,7 +14,7 @@ const items = [
 ] as const;
 
 const mobileTabs = [
-  ['/dashboard', 'Accueil', LayoutDashboard],
+  ['/dashboard', 'Accueil', Home],
   ['/new', 'Traduire', UploadCloud],
   ['/translations', 'Mes films', Film]
 ] as const;
@@ -89,6 +89,9 @@ export default function Layout({ children }: { children?: ReactNode }) {
       {mobileTabs.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) => isActive ? 'mobile-tab active' : 'mobile-tab'}>
         <Icon size={22}/><span>{label}</span>
       </NavLink>)}
+      <button type="button" className="mobile-tab" onClick={() => setConfirmLogout(true)}>
+        <LogOut size={22}/><span>Quitter</span>
+      </button>
     </nav>
 
     {confirmLogout && <div
