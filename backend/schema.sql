@@ -94,7 +94,7 @@ ALTER TABLE subtitles DROP COLUMN IF EXISTS content;
 DROP TABLE IF EXISTS translations CASCADE;
 
 -- 4. Date de fin de génération : sert au nettoyage automatique des fichiers
---    et de l'entrée projet après FILE_RETENTION_HOURS (24 h par défaut).
+--    et de l'entrée projet après FILE_RETENTION_HOURS (2 h par défaut).
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
 
 -- 5. La base ne stocke plus de chemins/liens, uniquement les noms de fichiers.

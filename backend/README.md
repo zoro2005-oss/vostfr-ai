@@ -65,7 +65,7 @@ Connexion pgAdmin :
 | `SECRET_KEY` | Clé de signature des JWT |
 | `UPLOAD_DIR` | Dossier de stockage des vidéos et sous-titres |
 | `MAX_UPLOAD_SIZE` | Taille maximale d'un upload en octets |
-| `FILE_RETENTION_HOURS` | Délai avant suppression automatique (vidéo + sous-titres + entrée) après génération (`24`, `0` = désactivé) |
+| `FILE_RETENTION_HOURS` | Délai avant suppression automatique (vidéo + sous-titres + entrée) après génération (`2`, `0` = désactivé) |
 | `CLEANUP_INTERVAL_MINUTES` | Fréquence de la tâche de nettoyage en minutes (`10`) |
 | `ORPHAN_FILE_GRACE_MINUTES` | Délai avant suppression des fichiers sur disque absents de la base (`60`) |
 | `WHISPER_MODEL` | Modèle Faster-Whisper local (`tiny`, `base`, `small`, `medium`, `large-v3`) |

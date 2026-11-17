@@ -37,7 +37,7 @@ function toNotification(project: Project): NotificationItem {
     return {
       id: project.id,
       title: 'Traduction terminée',
-      message: `${project.title} · sous-titres prêts, suppression dans 24 h`,
+      message: `${project.title} · sous-titres prêts, suppression dans 2 h`,
       tone: 'done',
       to: `/result/${projectName(project.title)}`,
       icon: CheckCircle2

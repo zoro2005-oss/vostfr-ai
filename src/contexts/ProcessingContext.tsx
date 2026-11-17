@@ -191,7 +191,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         <p id="global-success-desc">Votre fichier est prêt. Veuillez le télécharger en cliquant sur le bouton ci-dessous.</p>
         <div className="success-warning">
           <Clock3 size={16}/>
-          <span>Votre fichier sera automatiquement supprimé dans <strong>24 heures</strong> de votre historique. Pensez à le télécharger dès maintenant.</span>
+          <span>Votre fichier sera automatiquement supprimé dans <strong>2 heures</strong> de votre historique. Pensez à le télécharger dès maintenant.</span>
         </div>
         <div className="success-actions">
           <button type="button" className="button primary" onClick={() => downloadCompleted('srt')} disabled={downloading !== ''}>

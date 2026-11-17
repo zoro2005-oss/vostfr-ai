@@ -245,7 +245,7 @@ par une boucle asyncio au démarrage de l'API (`app/main.py`), toutes les
 `CLEANUP_INTERVAL_MINUTES` minutes. Elle regroupe deux nettoyages :
 
 - `cleanup_expired_projects()` : un projet `completed` dont `completed_at` dépasse
-  `FILE_RETENTION_HOURS` (24 h par défaut) est supprimé intégralement : vidéo source,
+   `FILE_RETENTION_HOURS` (2 h par défaut) est supprimé intégralement : vidéo source,
   fichiers SRT/VTT, audio temporaire et entrée en base (disparition de l'historique).
   Les projets `completed` antérieurs sans `completed_at` utilisent `created_at`.
   `FILE_RETENTION_HOURS=0` désactive ce nettoyage.
@@ -512,7 +512,7 @@ Fonctions `write_srt()` (ligne 181) et `write_vtt()` (ligne 193).
 | `ALGORITHM` | `HS256` | Algorithme JWT |
 | `UPLOAD_DIR` | `./storage` | Dossier des vidéos/audio/sous-titres |
 | `MAX_UPLOAD_SIZE` | `10737418240` | Taille max d'upload (10 Go) |
-| `FILE_RETENTION_HOURS` | `24` | Suppression auto (vidéo + sous-titres + entrée) après génération ; `0` = désactivé |
+| `FILE_RETENTION_HOURS` | `2` | Suppression auto (vidéo + sous-titres + entrée) après génération ; `0` = désactivé |
 | `CLEANUP_INTERVAL_MINUTES` | `10` | Fréquence de la tâche de nettoyage |
 | `ORPHAN_FILE_GRACE_MINUTES` | `60` | Délai avant suppression d'un fichier disque absent de la base |
 | `CORS_ORIGINS` | `http://localhost:5173,...` | Origines autorisées |
