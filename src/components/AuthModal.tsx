@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, Lock, Mail, ShieldCheck, User, X } from 'lucide-react';
 import Logo from './Logo';
 import { api, endpoints, getApiError, saveSession } from '../services/api';
+import { usePreloader } from '../contexts/PreloaderContext';
 
 type AuthMode = 'login' | 'register';
 
@@ -15,6 +16,7 @@ interface AuthModalProps {
 
 export default function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
   const navigate = useNavigate();
+  const { show } = usePreloader();
   const isLogin = mode === 'login';
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -86,6 +88,7 @@ export default function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
             password
           });
       saveSession(data);
+      show(1600);
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(getApiError(err));

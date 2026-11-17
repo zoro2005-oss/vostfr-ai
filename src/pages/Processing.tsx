@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Check, LoaderCircle, Film, AudioLines, Languages, AlignLeft, Clock3, FileText, AlertCircle, CheckCircle2, Download, X } from 'lucide-react';
+import { Check, LoaderCircle, Film, AudioLines, Languages, AlignLeft, Clock3, FileText, AlertCircle } from 'lucide-react';
 import { api, endpoints, getApiError } from '../services/api';
 import { projectName, slugify } from '../utils/slug';
 import type { Project } from '../types';
+import { useProcessing } from '../contexts/ProcessingContext';
 
 const steps = [
   ['Importation de la vidéo', Film],
@@ -30,10 +31,8 @@ export default function Processing() {
   const [status, setStatus] = useState('pending');
   const [error, setError] = useState('');
   const [elapsed, setElapsed] = useState(0);
-  const [projectTitle, setProjectTitle] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [downloading, setDownloading] = useState('');
   const started = useRef(Date.now());
+  const { report, complete } = useProcessing();
 
   useEffect(() => {
     const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started.current) / 1000)), 1000);
@@ -86,15 +85,17 @@ export default function Processing() {
         const { data } = await api.get(endpoints.progress(projectId));
         setProgress(data.progress ?? 0);
         setStatus(data.status);
+        report({ progress: data.progress ?? 0, status: data.status });
         if (data.status === 'completed') {
           finished = true;
+          let title = '';
           try {
             const { data: project } = await api.get(endpoints.project(projectId));
-            setProjectTitle(project.title);
+            title = project.title || '';
           } catch {
-            setProjectTitle('sous-titres');
+            title = '';
           }
-          setShowSuccess(true);
+          complete(projectId, title);
         }
         if (data.status === 'error') {
           finished = true;
@@ -110,7 +111,7 @@ export default function Processing() {
       if (!finished) load();
     }, 2000);
     return () => clearInterval(interval);
-  }, [projectId, navigate]);
+  }, [projectId, navigate, report, complete]);
 
   const current = Math.min(Math.floor(progress / 15), 6);
   const statusLabel = status === 'completed' ? 'Traitement terminé' : status === 'error' ? 'Échec du traitement' : status === 'processing' ? 'Traitement en cours' : 'En attente';
@@ -120,30 +121,6 @@ export default function Processing() {
   const estimatedEnd = remaining !== null
     ? new Date(started.current + (elapsed + remaining) * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     : '';
-  const resultPath = `/result/${projectTitle ? projectName(projectTitle) : projectId}`;
-
-  async function download(format: 'srt' | 'vtt') {
-    if (!projectId) return;
-    setDownloading(format);
-    setError('');
-    try {
-      const response = await api.get(endpoints.download(projectId), {
-        params: { format },
-        responseType: 'blob'
-      });
-      const url = URL.createObjectURL(response.data);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `${projectTitle || 'sous-titres'}.${format}`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(getApiError(err));
-    } finally {
-      setDownloading('');
-    }
-  }
-
   return <div className="processing-page">
     <div className="processing-card">
       <div className="processing-orb"><div className="orb-core">{error ? <AlertCircle size={30}/> : <Film size={30}/>}</div></div>
@@ -164,34 +141,5 @@ export default function Processing() {
         <span>{error ? <Link to="/new" className="text-link">Réessayer</Link> : 'Vous pouvez fermer cette page, le traitement continue en arrière-plan.'}</span>
       </div>
     </div>
-
-    {showSuccess && <div
-      className="confirm-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) navigate(resultPath);
-      }}
-    >
-      <div className="confirm-dialog success-dialog" role="dialog" aria-modal="true" aria-labelledby="success-title" aria-describedby="success-desc">
-        <button type="button" className="auth-modal-close success-close" onClick={() => navigate(resultPath)} aria-label="Fermer">
-          <X size={18}/>
-        </button>
-        <span className="success-icon"><CheckCircle2 size={26}/></span>
-        <h3 id="success-title">Traduction terminée !</h3>
-        <p id="success-desc">Votre fichier est prêt. Veuillez le télécharger en cliquant sur le bouton ci-dessous.</p>
-        <div className="success-warning">
-          <Clock3 size={16}/>
-          <span>Votre fichier sera automatiquement supprimé dans <strong>24 heures</strong> de votre historique. Pensez à le télécharger dès maintenant.</span>
-        </div>
-        <div className="success-actions">
-          <button type="button" className="button primary" onClick={() => download('srt')} disabled={downloading !== ''}>
-            <Download size={17}/><span>{downloading === 'srt' ? 'Téléchargement...' : 'Télécharger le SRT'}</span>
-          </button>
-          <button type="button" className="button secondary" onClick={() => download('vtt')} disabled={downloading !== ''}>
-            <Download size={17}/><span>{downloading === 'vtt' ? 'Téléchargement...' : 'Télécharger le VTT'}</span>
-          </button>
-        </div>
-        <button type="button" className="success-result-link" onClick={() => navigate(resultPath)}>Voir le résultat</button>
-      </div>
-    </div>}
   </div>;
 }

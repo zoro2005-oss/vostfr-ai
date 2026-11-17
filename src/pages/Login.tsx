@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, LoaderCircle, Lock, Mail, ShieldCheck, Sparkles } from 'lucide-react';
 import Logo from '../components/Logo';
 import { api, endpoints, getApiError, isAuthenticated, saveSession } from '../services/api';
+import { usePreloader } from '../contexts/PreloaderContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { show } = usePreloader();
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -25,6 +27,7 @@ export default function Login() {
     try {
       const { data } = await api.post(endpoints.login, { email, password });
       saveSession(data);
+      show(1600);
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(getApiError(err));

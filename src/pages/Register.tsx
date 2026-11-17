@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, LoaderCircle, Lock, Mail, ShieldCheck, Sparkles, User } from 'lucide-react';
 import Logo from '../components/Logo';
 import { api, endpoints, getApiError, isAuthenticated, saveSession } from '../services/api';
+import { usePreloader } from '../contexts/PreloaderContext';
 
 export default function Register() {
   const [fullName, setFullName] = useState('');
@@ -13,6 +14,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { show } = usePreloader();
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -35,6 +37,7 @@ export default function Register() {
         password
       });
       saveSession(data);
+      show(1600);
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(getApiError(err));

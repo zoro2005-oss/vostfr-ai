@@ -8,6 +8,7 @@ import {
   Clapperboard,
   Download,
   Languages,
+  Mail,
   Moon,
   Play,
   ShieldCheck,
@@ -229,6 +230,7 @@ export default function Landing() {
       <Logo />
       <span>© {new Date().getFullYear()} VOSTFR AI — Tous vos films, dans votre langue.</span>
       <div>
+        <a className="landing-email" href="mailto:kpoviessivivenoucherias@gmail.com"><Mail size={14}/> kpoviessivivenoucherias@gmail.com</a>
         <Link to="/login">Connexion</Link>
         <Link to="/register">Inscription</Link>
       </div>

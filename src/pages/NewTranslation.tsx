@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UploadCloud, FileVideo, X, ArrowRight, Info, Sparkles, LoaderCircle } from 'lucide-react';
 import { api, endpoints, getApiError } from '../services/api';
+import { useProcessing } from '../contexts/ProcessingContext';
 import { projectName } from '../utils/slug';
 
 const languages = [
@@ -29,6 +30,7 @@ export default function NewTranslation() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { start } = useProcessing();
 
   useEffect(() => {
     let active = true;
@@ -64,6 +66,7 @@ export default function NewTranslation() {
       const { data } = await api.post(endpoints.upload, formData);
       await api.post(endpoints.translate(data.id));
       const title = file.name.replace(/\.[^.]+$/, '');
+      start(data.id, title);
       navigate(`/processing/${projectName(title)}`);
     } catch (err) {
       setError(getApiError(err));

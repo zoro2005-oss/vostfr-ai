@@ -3,6 +3,7 @@ import { NavLink, Link, useLocation, useNavigate, Outlet } from 'react-router-do
 import { LayoutDashboard, UploadCloud, Film, History, Settings, LogOut, Search, Bell, Sun, Moon, Home, CheckCircle2, LoaderCircle, AlertCircle, Clock3, BellOff } from 'lucide-react';
 import Logo from './Logo';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePreloader } from '../contexts/PreloaderContext';
 import { api, clearSession, endpoints, getStoredUser } from '../services/api';
 import type { Project } from '../types';
 import { projectName } from '../utils/slug';
@@ -77,6 +78,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
   const title = items.find(([path]) => path === loc.pathname)?.[1] || 'Résultat';
   const { theme, toggleTheme } = useTheme();
+  const { show } = usePreloader();
   const user = getStoredUser();
   const displayName = user?.full_name || user?.email || 'Mon espace';
   const initials = (user?.full_name || user?.email || '?')
@@ -144,6 +146,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
 
   const logout = () => {
     clearSession();
+    show(1600);
     navigate('/', { replace: true });
   };
 
@@ -175,7 +178,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
       <header className="topbar">
         <div><p className="eyebrow">VOSTFR AI / WORKSPACE</p><h1>{title}</h1></div>
         <div className="top-actions">
-          <button className="icon-btn" onClick={(event) => toggleTheme({ x: event.clientX, y: event.clientY })} aria-label={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'} title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}>{theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}</button>
+          <Link to="/settings" className="icon-btn" aria-label="Paramètres" title="Paramètres"><Settings size={18}/></Link>
           <div className="search"><Search size={17}/><input placeholder="Rechercher..." aria-label="Rechercher" /></div>
           <div className="notif-wrap" ref={notifRef}>
             <button className="icon-btn" aria-label="Notifications" aria-haspopup="dialog" aria-expanded={notifOpen} onClick={toggleNotifications}><Bell size={18}/>{!notifSeen && <span className="notif" />}</button>
@@ -202,6 +205,15 @@ export default function Layout({ children }: { children?: ReactNode }) {
       </header>
       <div className="content">{children || <Outlet />}</div>
     </main>
+    <button
+      type="button"
+      className="theme-fab"
+      onClick={(event) => toggleTheme({ x: event.clientX, y: event.clientY })}
+      aria-label={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+      title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+    >
+      {theme === 'dark' ? <Sun size={22}/> : <Moon size={22}/>}
+    </button>
     <nav className="mobile-tabs" aria-label="Navigation mobile">
       {mobileTabs.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) => isActive ? 'mobile-tab active' : 'mobile-tab'}>
         <Icon size={22}/><span>{label}</span>

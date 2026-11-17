@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { User, SlidersHorizontal, Bell, ShieldCheck, LoaderCircle } from 'lucide-react';
+import { User, SlidersHorizontal, Bell, ShieldCheck, LoaderCircle, ChevronDown } from 'lucide-react';
 import { api, endpoints, getApiError, getStoredUser, saveStoredUser } from '../services/api';
 
 type Tab = 'profile' | 'translation' | 'notifications' | 'security';
@@ -192,6 +192,16 @@ export default function Settings() {
       </section>
 
       <section className="panel settings-form">
+        <div className="settings-mobile-nav">
+          <label htmlFor="settings-section">Section</label>
+          <div className="settings-select-wrap">
+            <select id="settings-section" value={tab} onChange={(event) => setTab(event.target.value as Tab)}>
+              {tabs.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+            </select>
+            <ChevronDown size={18} aria-hidden="true"/>
+          </div>
+        </div>
+
         {tab === 'profile' && <>
           <h3>Informations personnelles</h3>
           <p className="panel-subtitle">Ces informations sont visibles uniquement par vous.</p>

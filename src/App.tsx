@@ -20,8 +20,7 @@ function Home() {
 }
 
 export default function App() {
-  return (
-    <Routes>
+  return <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/maquette" element={<Maquette />} />
       <Route path="/login" element={<Landing />} />
@@ -38,6 +37,5 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to={isAuthenticated() ? '/dashboard' : '/'} replace />} />
-    </Routes>
-  );
+  </Routes>;
 }
