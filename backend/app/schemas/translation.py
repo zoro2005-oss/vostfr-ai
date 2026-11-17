@@ -4,7 +4,6 @@ class SubtitleSegment(BaseModel):
     id: int
     start: str
     end: str
-    original: str
     translated: str | None = None
 
     class Config:

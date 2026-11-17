@@ -34,6 +34,8 @@ export const endpoints = {
   resetPassword: '/api/auth/reset-password',
   me: '/api/auth/me',
   updateMe: '/api/auth/me',
+  changePassword: '/api/auth/change-password',
+  settings: '/api/settings',
   upload: '/api/projects/upload',
   projects: '/api/projects',
   project: (id: number | string) => `/api/projects/${id}`,

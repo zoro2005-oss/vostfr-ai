@@ -65,6 +65,9 @@ Connexion pgAdmin :
 | `SECRET_KEY` | Clé de signature des JWT |
 | `UPLOAD_DIR` | Dossier de stockage des vidéos et sous-titres |
 | `MAX_UPLOAD_SIZE` | Taille maximale d'un upload en octets |
+| `FILE_RETENTION_HOURS` | Délai avant suppression automatique (vidéo + sous-titres + entrée) après génération (`24`, `0` = désactivé) |
+| `CLEANUP_INTERVAL_MINUTES` | Fréquence de la tâche de nettoyage en minutes (`10`) |
+| `ORPHAN_FILE_GRACE_MINUTES` | Délai avant suppression des fichiers sur disque absents de la base (`60`) |
 | `WHISPER_MODEL` | Modèle Faster-Whisper local (`tiny`, `base`, `small`, `medium`, `large-v3`) |
 | `TRANSCRIPTION_PROVIDER` | `groq` (en ligne, recommandé) ou `local` (Whisper CPU) |
 | `TRANSLATION_PROVIDER` | `groq` (recommandé), `libretranslate` ou `google` |
@@ -89,6 +92,10 @@ automatiquement sur Whisper local (CPU) et Google Translate.
 | POST | `/api/auth/register` | Création de compte + JWT |
 | POST | `/api/auth/login` | Connexion + JWT |
 | GET | `/api/auth/me` | Utilisateur courant |
+| PUT | `/api/auth/me` | Mise à jour du profil |
+| POST | `/api/auth/change-password` | Changement de mot de passe |
+| GET | `/api/settings` | Préférences de traduction et notifications |
+| PUT | `/api/settings` | Mise à jour des préférences |
 | POST | `/api/projects/upload` | Upload d'une vidéo |
 | GET | `/api/projects` | Liste des projets |
 | GET | `/api/projects/{id}` | Détail d'un projet |

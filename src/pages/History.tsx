@@ -93,7 +93,6 @@ export default function History() {
   }
 
   return <>
-    <div className="page-intro compact"><p className="kicker">VOTRE BIBLIOTHÈQUE</p><h2>Historique des traductions</h2><p>Retrouvez et gérez tous vos projets au même endroit.</p></div>
     <section className="panel library-panel">
       <div className="library-toolbar">
         <div className="search ios-search"><Search size={16}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un film..." aria-label="Rechercher un film" /></div>

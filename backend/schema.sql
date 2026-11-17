@@ -13,6 +13,10 @@
 --
 -- La DATABASE_URL du backend (backend/.env) doit pointer vers cette même base :
 --   DATABASE_URL=postgresql+psycopg://<utilisateur>:<motdepasse>@localhost:5432/vostfr_ai
+--
+-- NOTE : les textes des sous-titres ne sont plus stockés en base.
+-- Ils restent uniquement dans les fichiers SRT/VTT sur le disque.
+-- La table "translations" est supprimée par la migration en fin de fichier.
 
 BEGIN;
 
@@ -44,40 +48,26 @@ CREATE TABLE IF NOT EXISTS projects (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR NOT NULL,
     original_filename VARCHAR NOT NULL,
-    video_path VARCHAR NOT NULL,
+    video_filename VARCHAR NOT NULL,
     duration VARCHAR,
     source_language VARCHAR DEFAULT 'auto',
     target_language VARCHAR DEFAULT 'fr',
     status VARCHAR DEFAULT 'pending',
     progress INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    segments_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE INDEX IF NOT EXISTS ix_projects_id ON projects(id);
-
-CREATE TABLE IF NOT EXISTS translations (
-    id SERIAL PRIMARY KEY,
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    original_text TEXT NOT NULL,
-    translated_text TEXT,
-    start_time VARCHAR NOT NULL,
-    end_time VARCHAR NOT NULL,
-    sequence_number INTEGER NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS ix_translations_id ON translations(id);
 
 CREATE TABLE IF NOT EXISTS subtitles (
     id SERIAL PRIMARY KEY,
     project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     filename VARCHAR NOT NULL,
-    file_path VARCHAR NOT NULL,
     format VARCHAR NOT NULL,
-    content TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
-ALTER TABLE subtitles ADD COLUMN IF NOT EXISTS content TEXT;
 
 CREATE INDEX IF NOT EXISTS ix_subtitles_id ON subtitles(id);
 
@@ -86,9 +76,53 @@ CREATE TABLE IF NOT EXISTS settings (
     user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     preferred_language VARCHAR DEFAULT 'fr',
     theme VARCHAR DEFAULT 'dark',
-    translation_preferences JSON DEFAULT '{}'::json
+    translation_preferences JSON DEFAULT '{}'::json,
+    notifications JSON DEFAULT '{}'::json
 );
 
 CREATE INDEX IF NOT EXISTS ix_settings_id ON settings(id);
+
+-- Migrations pour les bases existantes :
+-- 1. Compteur de segments stocké sur le projet (plus de table translations).
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS segments_count INTEGER DEFAULT 0;
+
+-- 2. Le texte des sous-titres reste uniquement dans les fichiers SRT/VTT.
+ALTER TABLE subtitles DROP COLUMN IF EXISTS content;
+
+-- 3. Suppression de l'ancienne table qui stockait les textes traduits.
+--    Les données ont été exportées dans backend/storage/exports/translations.csv.
+DROP TABLE IF EXISTS translations CASCADE;
+
+-- 4. Date de fin de génération : sert au nettoyage automatique des fichiers
+--    et de l'entrée projet après FILE_RETENTION_HOURS (24 h par défaut).
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
+
+-- 5. La base ne stocke plus de chemins/liens, uniquement les noms de fichiers.
+--    Les chemins sont reconstruits par le backend (UPLOAD_DIR + sous-dossier).
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'projects' AND column_name = 'video_path'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'projects' AND column_name = 'video_filename'
+    ) THEN
+        ALTER TABLE projects RENAME COLUMN video_path TO video_filename;
+    END IF;
+END $$;
+
+UPDATE projects
+SET video_filename = regexp_replace(video_filename, '^.*/', '')
+WHERE video_filename LIKE '%/%';
+
+ALTER TABLE subtitles DROP COLUMN IF EXISTS file_path;
+
+UPDATE subtitles
+SET filename = regexp_replace(filename, '^.*/', '')
+WHERE filename LIKE '%/%';
+
+-- 6. Préférences de notifications par utilisateur.
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS notifications JSON DEFAULT '{}'::json;
 
 COMMIT;

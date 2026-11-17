@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     UPLOAD_DIR: str = "./storage"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024 * 1024
+    FILE_RETENTION_HOURS: int = 24
+    CLEANUP_INTERVAL_MINUTES: int = 10
+    ORPHAN_FILE_GRACE_MINUTES: int = 60
     CORS_ORIGINS: str = "http://localhost:5173"
     TRANSLATION_PROVIDER: str = "groq"
     TRANSCRIPTION_PROVIDER: str = "groq"

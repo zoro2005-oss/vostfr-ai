@@ -31,7 +31,6 @@ export interface SubtitleSegment {
   id: number;
   start: string;
   end: string;
-  original: string;
   translated: string;
 }
 

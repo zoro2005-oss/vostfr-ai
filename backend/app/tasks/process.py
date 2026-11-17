@@ -2,22 +2,16 @@ import logging
 import os
 import subprocess
 import time
+from datetime import datetime, timezone
 
 import httpx
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.paths import audio_file_path, subtitle_file_path, video_file_path
 from app.models.project import Project
 from app.models.subtitle import Subtitle
-from app.models.translation import Translation
 from app.services.translation import translate_segments
-
-UPLOAD_DIR = os.path.abspath(settings.UPLOAD_DIR)
-AUDIO_DIR = os.path.join(UPLOAD_DIR, "audios")
-SUBTITLE_DIR = os.path.join(UPLOAD_DIR, "subtitles")
-
-os.makedirs(AUDIO_DIR, exist_ok=True)
-os.makedirs(SUBTITLE_DIR, exist_ok=True)
 
 logger = logging.getLogger(__name__)
 
@@ -274,25 +268,25 @@ def transcribe_segments(
     return transcribe_segments_local(audio_path)
 
 
-def write_srt(path: str, translations: list[Translation]) -> str:
+def write_srt(path: str, cues: list[dict]) -> str:
     lines = []
-    for item in translations:
-        lines.append(f"{item.sequence_number}\n")
-        lines.append(f"{item.start_time} --> {item.end_time}\n")
-        lines.append(f"{item.translated_text or item.original_text}\n\n")
+    for cue in cues:
+        lines.append(f"{cue['sequence_number']}\n")
+        lines.append(f"{cue['start_time']} --> {cue['end_time']}\n")
+        lines.append(f"{cue['text']}\n\n")
     content = "".join(lines)
     with open(path, "w", encoding="utf-8") as file:
         file.write(content)
     return content
 
 
-def write_vtt(path: str, translations: list[Translation]) -> str:
+def write_vtt(path: str, cues: list[dict]) -> str:
     lines = ["WEBVTT\n\n"]
-    for item in translations:
-        start = item.start_time.replace(",", ".")
-        end = item.end_time.replace(",", ".")
+    for cue in cues:
+        start = cue["start_time"].replace(",", ".")
+        end = cue["end_time"].replace(",", ".")
         lines.append(f"{start} --> {end}\n")
-        lines.append(f"{item.translated_text or item.original_text}\n\n")
+        lines.append(f"{cue['text']}\n\n")
     content = "".join(lines)
     with open(path, "w", encoding="utf-8") as file:
         file.write(content)
@@ -309,21 +303,21 @@ def process_project(db: Session, project_id: int) -> None:
         project.progress = 10
         db.commit()
 
-        duration = probe_duration(project.video_path)
+        video_path = video_file_path(project.video_filename)
+        duration = probe_duration(video_path)
         if duration:
             project.duration = format_duration(duration)
         project.progress = 20
         db.commit()
 
-        audio_path = os.path.join(AUDIO_DIR, f"{project_id}.flac")
-        extract_audio(project.video_path, audio_path)
+        audio_path = audio_file_path(project_id)
+        extract_audio(video_path, audio_path)
 
         project.progress = 40
         db.commit()
 
         segments = transcribe_segments(audio_path, project.source_language)
 
-        db.query(Translation).filter(Translation.project_id == project.id).delete()
         db.query(Subtitle).filter(Subtitle.project_id == project.id).delete()
         db.commit()
 
@@ -343,42 +337,34 @@ def process_project(db: Session, project_id: int) -> None:
             on_progress=update_progress,
         )
 
-        for sequence_number, ((text, start, end), translated) in enumerate(
-            zip(segments, translated_texts), start=1
-        ):
-            db.add(
-                Translation(
-                    project_id=project.id,
-                    original_text=text,
-                    translated_text=translated,
-                    start_time=format_timestamp_srt(start),
-                    end_time=format_timestamp_srt(end),
-                    sequence_number=sequence_number,
-                )
+        cues = [
+            {
+                "sequence_number": sequence_number,
+                "start_time": format_timestamp_srt(start),
+                "end_time": format_timestamp_srt(end),
+                "text": translated or "",
+            }
+            for sequence_number, ((_, start, end), translated) in enumerate(
+                zip(segments, translated_texts), start=1
             )
-        db.commit()
+        ]
+        project.segments_count = len(cues)
 
         project.progress = 70
         db.commit()
 
-        translations = (
-            db.query(Translation)
-            .filter(Translation.project_id == project.id)
-            .order_by(Translation.sequence_number)
-            .all()
-        )
-
         base_name = os.path.splitext(os.path.basename(project.original_filename))[0]
         suffix = project.target_language or "fr"
-        srt_path = os.path.join(SUBTITLE_DIR, f"{base_name}.{suffix}.srt")
-        vtt_path = os.path.join(SUBTITLE_DIR, f"{base_name}.{suffix}.vtt")
+        srt_filename = f"{base_name}.{suffix}.srt"
+        vtt_filename = f"{base_name}.{suffix}.vtt"
 
-        srt_content = write_srt(srt_path, translations)
-        vtt_content = write_vtt(vtt_path, translations)
+        write_srt(subtitle_file_path(srt_filename), cues)
+        write_vtt(subtitle_file_path(vtt_filename), cues)
 
-        db.add(Subtitle(project_id=project.id, filename=os.path.basename(srt_path), file_path=srt_path, format="srt", content=srt_content))
-        db.add(Subtitle(project_id=project.id, filename=os.path.basename(vtt_path), file_path=vtt_path, format="vtt", content=vtt_content))
+        db.add(Subtitle(project_id=project.id, filename=srt_filename, format="srt"))
+        db.add(Subtitle(project_id=project.id, filename=vtt_filename, format="vtt"))
 
+        project.completed_at = datetime.now(timezone.utc)
         project.progress = 100
         project.status = "completed"
         db.commit()
@@ -393,6 +379,6 @@ def process_project(db: Session, project_id: int) -> None:
             db.commit()
     finally:
         for extension in (".flac", ".wav"):
-            audio_path = os.path.join(AUDIO_DIR, f"{project_id}{extension}")
+            audio_path = audio_file_path(project_id, extension)
             if os.path.exists(audio_path):
                 os.remove(audio_path)

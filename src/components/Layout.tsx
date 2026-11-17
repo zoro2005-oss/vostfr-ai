@@ -1,9 +1,11 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, UploadCloud, Film, History, Settings, LogOut, Search, Bell, Sun, Moon, Home } from 'lucide-react';
+import { LayoutDashboard, UploadCloud, Film, History, Settings, LogOut, Search, Bell, Sun, Moon, Home, CheckCircle2, LoaderCircle, AlertCircle, Clock3, BellOff } from 'lucide-react';
 import Logo from './Logo';
 import { useTheme } from '../contexts/ThemeContext';
-import { clearSession, getStoredUser } from '../services/api';
+import { api, clearSession, endpoints, getStoredUser } from '../services/api';
+import type { Project } from '../types';
+import { projectName } from '../utils/slug';
 
 const items = [
   ['/dashboard', 'Tableau de bord', LayoutDashboard],
@@ -18,6 +20,57 @@ const mobileTabs = [
   ['/new', 'Traduire', UploadCloud],
   ['/translations', 'Mes films', Film]
 ] as const;
+
+type NotificationItem = {
+  id: number;
+  title: string;
+  message: string;
+  tone: 'done' | 'progress' | 'error' | 'waiting';
+  to: string;
+  icon: typeof Bell;
+};
+
+function toNotification(project: Project): NotificationItem {
+  const status = String(project.status || '').toLowerCase();
+  if (/termin|complet/.test(status)) {
+    return {
+      id: project.id,
+      title: 'Traduction terminée',
+      message: `${project.title} · sous-titres prêts, suppression dans 24 h`,
+      tone: 'done',
+      to: `/result/${projectName(project.title)}`,
+      icon: CheckCircle2
+    };
+  }
+  if (/cours|processing/.test(status)) {
+    return {
+      id: project.id,
+      title: 'Traduction en cours',
+      message: `${project.title} · ${Math.round(project.progress || 0)} %`,
+      tone: 'progress',
+      to: `/processing/${projectName(project.title)}`,
+      icon: LoaderCircle
+    };
+  }
+  if (/erreur|error/.test(status)) {
+    return {
+      id: project.id,
+      title: 'Échec du traitement',
+      message: `${project.title} · ouvrez l’historique pour réessayer`,
+      tone: 'error',
+      to: '/history',
+      icon: AlertCircle
+    };
+  }
+  return {
+    id: project.id,
+    title: 'Traduction en attente',
+    message: `${project.title} · le traitement va démarrer`,
+    tone: 'waiting',
+    to: '/history',
+    icon: Clock3
+  };
+}
 
 export default function Layout({ children }: { children?: ReactNode }) {
   const loc = useLocation();
@@ -34,6 +87,11 @@ export default function Layout({ children }: { children?: ReactNode }) {
     .join('') || '?';
 
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifSeen, setNotifSeen] = useState(() => sessionStorage.getItem('vostfr_notif_seen') === '1');
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!confirmLogout) return;
@@ -43,6 +101,46 @@ export default function Layout({ children }: { children?: ReactNode }) {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [confirmLogout]);
+
+  useEffect(() => {
+    let active = true;
+    setNotifLoading(true);
+    api.get<Project[]>(endpoints.projects)
+      .then(({ data }) => {
+        if (active) setNotifications(data.slice(0, 8).map(toNotification));
+      })
+      .catch(() => {
+        if (active) setNotifications([]);
+      })
+      .finally(() => {
+        if (active) setNotifLoading(false);
+      });
+    return () => { active = false; };
+  }, [notifOpen]);
+
+  useEffect(() => {
+    if (!notifOpen) return;
+    const onDown = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) setNotifOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setNotifOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [notifOpen]);
+
+  const toggleNotifications = () => {
+    if (!notifOpen) {
+      setNotifSeen(true);
+      sessionStorage.setItem('vostfr_notif_seen', '1');
+    }
+    setNotifOpen((value) => !value);
+  };
 
   const logout = () => {
     clearSession();
@@ -79,7 +177,26 @@ export default function Layout({ children }: { children?: ReactNode }) {
         <div className="top-actions">
           <button className="icon-btn" onClick={(event) => toggleTheme({ x: event.clientX, y: event.clientY })} aria-label={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'} title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}>{theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}</button>
           <div className="search"><Search size={17}/><input placeholder="Rechercher..." aria-label="Rechercher" /></div>
-          <button className="icon-btn" aria-label="Notifications"><Bell size={18}/><span className="notif" /></button>
+          <div className="notif-wrap" ref={notifRef}>
+            <button className="icon-btn" aria-label="Notifications" aria-haspopup="dialog" aria-expanded={notifOpen} onClick={toggleNotifications}><Bell size={18}/>{!notifSeen && <span className="notif" />}</button>
+            {notifOpen && <div className="notif-popover" role="dialog" aria-label="Notifications">
+              <div className="notif-head"><strong>Notifications</strong>{notifications.length > 0 && <span className="notif-count">{notifications.length}</span>}</div>
+              <div className="notif-list">
+                {notifLoading
+                  ? <div className="notif-empty"><LoaderCircle size={18} className="spin"/>Chargement…</div>
+                  : notifications.length === 0
+                    ? <div className="notif-empty"><BellOff size={18}/>Aucune notification pour le moment.</div>
+                    : notifications.map((notification) => {
+                      const Icon = notification.icon;
+                      return <button key={notification.id} type="button" className="notif-item" onClick={() => { setNotifOpen(false); navigate(notification.to); }}>
+                        <span className={`notif-item-icon ${notification.tone}`}><Icon size={16}/></span>
+                        <span className="notif-item-body"><strong>{notification.title}</strong><small>{notification.message}</small></span>
+                      </button>;
+                    })}
+              </div>
+              <button type="button" className="notif-footer" onClick={() => { setNotifOpen(false); navigate('/history'); }}>Voir tout l’historique</button>
+            </div>}
+          </div>
           <Link to="/settings" className="avatar" aria-label="Profil et paramètres">{initials}</Link>
         </div>
       </header>

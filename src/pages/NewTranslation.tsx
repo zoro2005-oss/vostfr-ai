@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UploadCloud, FileVideo, X, ArrowRight, Info, Sparkles, LoaderCircle } from 'lucide-react';
 import { api, endpoints, getApiError } from '../services/api';
@@ -29,6 +29,18 @@ export default function NewTranslation() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let active = true;
+    api.get(endpoints.settings).then(({ data }) => {
+      if (!active) return;
+      const preferred = data?.preferred_language;
+      if (typeof preferred === 'string' && languages.some(([code]) => code === preferred && code !== 'auto')) {
+        setTarget(preferred);
+      }
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const choose = (selected?: File) => {
     if (!selected) return;

@@ -1,25 +1,19 @@
 import os
+import re
 from datetime import datetime
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
 from app.models.project import Project
-from app.models.translation import Translation
 from app.models.subtitle import Subtitle
 from app.core.config import settings
+from app.core.paths import audio_file_path, subtitle_file_path, video_file_path
 
 router = APIRouter()
-
-UPLOAD_DIR = os.path.abspath(settings.UPLOAD_DIR)
-VIDEO_DIR = os.path.join(UPLOAD_DIR, "videos")
-SUBTITLE_DIR = os.path.join(UPLOAD_DIR, "subtitles")
-
-os.makedirs(VIDEO_DIR, exist_ok=True)
-os.makedirs(SUBTITLE_DIR, exist_ok=True)
 
 @router.post("/upload")
 async def upload_video(
@@ -36,7 +30,7 @@ async def upload_video(
         raise HTTPException(status_code=400, detail="Format de vidéo non supporté")
 
     filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex}{ext}"
-    file_path = os.path.join(VIDEO_DIR, filename)
+    file_path = video_file_path(filename)
 
     size = 0
     try:
@@ -57,7 +51,7 @@ async def upload_video(
         user_id=current_user.id,
         title=os.path.splitext(original_filename)[0] or "Vidéo",
         original_filename=original_filename,
-        video_path=file_path,
+        video_filename=filename,
         source_language=source_language,
         target_language=target_language,
         status="pending",
@@ -85,7 +79,7 @@ def list_projects(db: Session = Depends(get_db), current_user: User = Depends(ge
             "status": "Terminé" if p.status == "completed" else "En cours" if p.status == "processing" else "Erreur" if p.status == "error" else "En attente",
             "progress": p.progress,
             "duration": p.duration or "-",
-            "segments": len(p.translations)
+            "segments": p.segments_count or 0
         })
     return result
 
@@ -107,7 +101,7 @@ def get_project(project_id: int, db: Session = Depends(get_db), current_user: Us
         "status": project.status,
         "progress": project.progress,
         "duration": project.duration,
-        "segments": len(project.translations),
+        "segments": project.segments_count or 0,
     }
 
 @router.post("/{project_id}/translate")
@@ -131,23 +125,52 @@ def get_progress(project_id: int, db: Session = Depends(get_db), current_user: U
         raise HTTPException(status_code=404, detail="Projet introuvable")
     return {"status": project.status, "progress": project.progress}
 
+def _parse_subtitle_blocks(content: str, skip_headers: bool = False) -> list[dict]:
+    segments = []
+    for block in re.split(r"\n\s*\n", content.strip()):
+        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        if not lines:
+            continue
+        if skip_headers and lines[0].upper().startswith(("WEBVTT", "NOTE")):
+            continue
+        index = 1 if lines[0].isdigit() else 0
+        if index >= len(lines) or "-->" not in lines[index]:
+            continue
+        start, end = [part.strip() for part in lines[index].split("-->", 1)]
+        end = end.split()[0]
+        text = "\n".join(lines[index + 1:]).strip()
+        if text:
+            segments.append({"start": start, "end": end, "translated": text})
+    return segments
+
+
+def _read_subtitle_segments(subtitle: Subtitle | None) -> list[dict]:
+    if not subtitle:
+        return []
+    path = subtitle_file_path(subtitle.filename)
+    if not os.path.exists(path):
+        return []
+    with open(path, "r", encoding="utf-8") as file:
+        content = file.read()
+    segments = _parse_subtitle_blocks(content, skip_headers=subtitle.format == "vtt")
+    for index, segment in enumerate(segments, start=1):
+        segment["id"] = index
+    return segments
+
+
 @router.get("/{project_id}/subtitles")
 def get_subtitles(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     project = db.query(Project).filter(Project.id == project_id, Project.user_id == current_user.id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Projet introuvable")
-    
-    translations = db.query(Translation).filter(Translation.project_id == project_id).order_by(Translation.sequence_number).all()
-    segments = []
-    for t in translations:
-        segments.append({
-            "id": t.id,
-            "start": t.start_time,
-            "end": t.end_time,
-            "original": t.original_text,
-            "translated": t.translated_text
-        })
-    return segments
+
+    subtitle = (
+        db.query(Subtitle)
+        .filter(Subtitle.project_id == project_id)
+        .order_by(Subtitle.id)
+        .first()
+    )
+    return _read_subtitle_segments(subtitle)
 
 @router.get("/{project_id}/download")
 def download_subtitle(project_id: int, format: str = "srt", db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -163,17 +186,11 @@ def download_subtitle(project_id: int, format: str = "srt", db: Session = Depend
         raise HTTPException(status_code=404, detail="Fichier non trouvé")
 
     media_type = "text/vtt" if format == "vtt" else "text/plain"
-    if subtitle.content:
-        return Response(
-            content=subtitle.content,
-            media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{subtitle.filename}"'},
-        )
-
-    if not os.path.exists(subtitle.file_path):
+    path = subtitle_file_path(subtitle.filename)
+    if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Fichier non trouvé")
 
-    return FileResponse(subtitle.file_path, filename=subtitle.filename, media_type=media_type)
+    return FileResponse(path, filename=subtitle.filename, media_type=media_type)
 
 @router.delete("/{project_id}")
 def delete_project(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -182,21 +199,23 @@ def delete_project(project_id: int, db: Session = Depends(get_db), current_user:
         raise HTTPException(status_code=404, detail="Projet introuvable")
     
     try:
-        if project.video_path and os.path.exists(project.video_path):
-            os.remove(project.video_path)
-    except:
+        path = video_file_path(project.video_filename)
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
         pass
-    
+
     for sub in project.subtitles:
         try:
-            if sub.file_path and os.path.exists(sub.file_path):
-                os.remove(sub.file_path)
+            path = subtitle_file_path(sub.filename)
+            if os.path.exists(path):
+                os.remove(path)
         except Exception:
             pass
 
     for extension in (".flac", ".wav"):
         try:
-            audio_path = os.path.join(UPLOAD_DIR, "audios", f"{project.id}{extension}")
+            audio_path = audio_file_path(project.id, extension)
             if os.path.exists(audio_path):
                 os.remove(audio_path)
         except Exception:

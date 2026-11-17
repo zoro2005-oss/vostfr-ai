@@ -174,6 +174,9 @@ vostfr-ai/
 - `POST /api/auth/reset-password` : vérifie le token hashé, son expiration et son usage unique, puis met à jour le mot de passe
 - `GET /api/auth/me` : utilisateur courant
 - `PUT /api/auth/me` : mise à jour du nom complet
+- `POST /api/auth/change-password` : vérifie le mot de passe actuel puis met à jour le hash
+- `GET /api/settings` : préférences de traduction et de notifications (créées à la demande)
+- `PUT /api/settings` : mise à jour des préférences (`preferred_language`, `translation_preferences`, `notifications`)
 - JWT signé avec `SECRET_KEY`, algorithme `HS256`, expiration `ACCESS_TOKEN_EXPIRE_MINUTES`
 - Dépendance `get_current_user` : `HTTPBearer` + décodage JWT + lookup en base
 
@@ -183,10 +186,13 @@ vostfr-ai/
 |---|---|
 | `users` | `id`, `full_name`, `email` (unique), `password_hash`, `created_at` |
 | `password_reset_tokens` | `id`, `user_id`, `token_hash` (unique), `expires_at`, `used_at`, `created_at` |
-| `projects` | `id`, `user_id`, `title`, `original_filename`, `video_path`, `duration`, `source_language`, `target_language`, `status`, `progress`, `created_at` |
-| `translations` | `id`, `project_id`, `original_text`, `translated_text`, `start_time`, `end_time`, `sequence_number` |
-| `subtitles` | `id`, `project_id`, `filename`, `file_path`, `format` (`srt`/`vtt`), `content`, `created_at` |
-| `settings` | `id`, `user_id`, `preferred_language`, `theme`, `translation_preferences` (JSON) |
+| `projects` | `id`, `user_id`, `title`, `original_filename`, `video_filename`, `duration`, `source_language`, `target_language`, `status`, `progress`, `segments_count`, `created_at`, `completed_at` |
+| `subtitles` | `id`, `project_id`, `filename`, `format` (`srt`/`vtt`), `created_at` |
+
+La base ne stocke **que les noms de fichiers** (`video_filename`, `filename`), jamais
+les chemins ni les URL. Les chemins disque sont reconstruits par
+`app/core/paths.py` à partir de `UPLOAD_DIR`.
+| `settings` | `id`, `user_id`, `preferred_language`, `theme`, `translation_preferences` (JSON), `notifications` (JSON) |
 
 Statuts d'un projet : `pending`, `processing`, `completed`, `error`.
 Le frontend les affiche en français : « En attente », « En cours », « Terminé », « Erreur ».
@@ -228,9 +234,27 @@ Fichier central : `backend/app/tasks/process.py` → `process_project()` (ligne 
 | 50 % | Transcription terminée |
 | 50 → 70 % | Traduction par lots |
 | 70 % | Écriture des fichiers SRT/VTT |
-| 100 % | Statut `completed` |
+| 100 % | Statut `completed`, `completed_at` renseigné |
 
 En cas d'exception : rollback, statut `error`, progression remise à 0, audio temporaire supprimé.
+
+### Rétention et suppression automatique
+
+Fichier : `backend/app/tasks/cleanup.py`. La tâche `run_cleanup_task()` est lancée
+par une boucle asyncio au démarrage de l'API (`app/main.py`), toutes les
+`CLEANUP_INTERVAL_MINUTES` minutes. Elle regroupe deux nettoyages :
+
+- `cleanup_expired_projects()` : un projet `completed` dont `completed_at` dépasse
+  `FILE_RETENTION_HOURS` (24 h par défaut) est supprimé intégralement : vidéo source,
+  fichiers SRT/VTT, audio temporaire et entrée en base (disparition de l'historique).
+  Les projets `completed` antérieurs sans `completed_at` utilisent `created_at`.
+  `FILE_RETENTION_HOURS=0` désactive ce nettoyage.
+- `cleanup_orphan_files()` : supprime les vidéos et sous-titres présents sur le disque
+  mais absents de la base, après `ORPHAN_FILE_GRACE_MINUTES` (60 min) pour ne pas
+  toucher à un upload en cours.
+
+La colonne `completed_at` est ajoutée automatiquement au démarrage (`ALTER TABLE
+... ADD COLUMN IF NOT EXISTS`) et figure dans `backend/schema.sql`.
 
 ### Extraction audio
 `extract_audio()` (ligne 61) :
@@ -488,6 +512,9 @@ Fonctions `write_srt()` (ligne 181) et `write_vtt()` (ligne 193).
 | `ALGORITHM` | `HS256` | Algorithme JWT |
 | `UPLOAD_DIR` | `./storage` | Dossier des vidéos/audio/sous-titres |
 | `MAX_UPLOAD_SIZE` | `10737418240` | Taille max d'upload (10 Go) |
+| `FILE_RETENTION_HOURS` | `24` | Suppression auto (vidéo + sous-titres + entrée) après génération ; `0` = désactivé |
+| `CLEANUP_INTERVAL_MINUTES` | `10` | Fréquence de la tâche de nettoyage |
+| `ORPHAN_FILE_GRACE_MINUTES` | `60` | Délai avant suppression d'un fichier disque absent de la base |
 | `CORS_ORIGINS` | `http://localhost:5173,...` | Origines autorisées |
 | `TRANSCRIPTION_PROVIDER` | `groq` | `groq` ou `local` |
 | `TRANSLATION_PROVIDER` | `groq` | `groq`, `libretranslate` ou `google` |
