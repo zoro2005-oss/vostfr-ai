@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr
 
 class UserBase(BaseModel):
@@ -16,6 +18,10 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: int
+    role: str = "user"
+    credits: int = 0
+    is_active: bool = True
+    created_at: datetime | None = None
 
     class Config:
         from_attributes = True

@@ -6,9 +6,11 @@ import Processing from './pages/Processing';
 import Result from './pages/Result';
 import History from './pages/History';
 import Settings from './pages/Settings';
+import Subscription from './pages/Subscription';
 import Maquette from './pages/Maquette';
 import Landing from './pages/Landing';
 import ResetPassword from './pages/ResetPassword';
+import AdminApp from '../admin_ai/AdminApp';
 import { isAuthenticated } from './services/api';
 
 function RequireAuth() {
@@ -26,6 +28,7 @@ export default function App() {
       <Route path="/login" element={<Landing />} />
       <Route path="/register" element={<Landing />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/admin_ai/*" element={<AdminApp />} />
       <Route element={<RequireAuth />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/new" element={<NewTranslation />} />
@@ -34,6 +37,7 @@ export default function App() {
         <Route path="/result/:slug" element={<Result />} />
         <Route path="/history" element={<History />} />
         <Route path="/translations" element={<History />} />
+        <Route path="/abonnement" element={<Subscription />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to={isAuthenticated() ? '/dashboard' : '/'} replace />} />

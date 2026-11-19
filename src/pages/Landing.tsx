@@ -19,8 +19,9 @@ import {
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import AuthModal from '../components/AuthModal';
-import { isAuthenticated } from '../services/api';
+import { api, endpoints, isAuthenticated } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import type { PublicPlan } from '../types';
 
 const features = [
   {
@@ -53,6 +54,88 @@ const steps = [
 
 const languages = ['Anglais', 'Japonais', 'Coréen', 'Espagnol', 'Allemand', 'Italien', 'Portugais', 'Chinois'];
 
+const fallbackPlans: PublicPlan[] = [
+  {
+    id: 1,
+    code: 'FREE',
+    name: 'Gratuit',
+    description: '3 générations par mois, vidéos jusqu’à 2 h 30 incluses.',
+    price: 0,
+    currency: 'USD',
+    duration_days: 30,
+    generation_limit: 3,
+    video_max_minutes: 150,
+    backup_enabled: false,
+    retention_minutes: 120,
+    features: { price_fcfa: 0, highlight: 'Pour découvrir' }
+  },
+  {
+    id: 2,
+    code: 'PREMIUM_15',
+    name: 'Premium 15 jours',
+    description: '15 générations valables 15 jours, sans limite de durée par vidéo.',
+    price: 7.99,
+    currency: 'USD',
+    duration_days: 15,
+    generation_limit: 15,
+    video_max_minutes: null,
+    backup_enabled: false,
+    retention_minutes: 120,
+    features: { premium: true, price_fcfa: 4800, highlight: 'Essai premium' }
+  },
+  {
+    id: 3,
+    code: 'PREMIUM_30_BACKUP',
+    name: 'Premium 30 jours – 30 générations',
+    description: '30 générations avec sauvegarde, sans limite de durée par vidéo.',
+    price: 19.99,
+    currency: 'USD',
+    duration_days: 30,
+    generation_limit: 30,
+    video_max_minutes: null,
+    backup_enabled: true,
+    retention_minutes: 0,
+    features: { premium: true, download: true, price_fcfa: 12000, highlight: 'Le plus choisi' }
+  },
+  {
+    id: 4,
+    code: 'PREMIUM_30_UNLIMITED',
+    name: 'Premium 30 jours – Illimité',
+    description: 'Générations illimitées sans sauvegarde ni limite de durée.',
+    price: 29.99,
+    currency: 'USD',
+    duration_days: 30,
+    generation_limit: null,
+    video_max_minutes: null,
+    backup_enabled: false,
+    retention_minutes: 15,
+    features: { premium: true, price_fcfa: 18000, highlight: 'Gros volumes' }
+  }
+];
+
+const planPrice = (plan: PublicPlan) => new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: plan.currency,
+  minimumFractionDigits: 2
+}).format(plan.price);
+
+const planBullets = (plan: PublicPlan) => {
+  const bullets = [
+    plan.generation_limit === null
+      ? 'Générations illimitées'
+      : `${plan.generation_limit} génération${plan.generation_limit > 1 ? 's' : ''}`,
+    `Validité : ${plan.duration_days} jours`,
+    plan.backup_enabled ? 'Sauvegarde des vidéos activée' : 'Sans sauvegarde'
+  ];
+  if (plan.retention_minutes === 0) bullets.push('Conservation permanente');
+  else if (plan.retention_minutes === 15) bullets.push('Suppression automatique après 15 min');
+  else bullets.push(`Conservation : ${plan.retention_minutes} min`);
+  bullets.push(plan.video_max_minutes
+    ? `Vidéos jusqu'à ${plan.video_max_minutes} min incluses, puis Premium`
+    : 'Aucune limite de durée par vidéo');
+  return bullets;
+};
+
 export default function Landing() {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
@@ -63,10 +146,19 @@ export default function Landing() {
       ? 'register'
       : null;
   const [authMode, setAuthMode] = useState<'login' | 'register' | null>(routeMode);
+  const [plans, setPlans] = useState<PublicPlan[]>(fallbackPlans);
 
   useEffect(() => {
     setAuthMode(routeMode);
   }, [routeMode]);
+
+  useEffect(() => {
+    let active = true;
+    api.get<PublicPlan[]>(endpoints.plans)
+      .then(({ data }) => { if (active && data.length) setPlans(data); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (authMode && isAuthenticated()) {
@@ -91,6 +183,7 @@ export default function Landing() {
       <nav className="landing-nav" aria-label="Navigation principale">
         <a href="#fonctionnalites">Fonctionnalités</a>
         <a href="#fonctionnement">Comment ça marche</a>
+        <a href="#tarifs">Tarifs</a>
         <a href="#langues">Langues</a>
       </nav>
       <div className="landing-actions">
@@ -191,6 +284,38 @@ export default function Landing() {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section id="tarifs" className="landing-section landing-pricing">
+        <div className="landing-section-head">
+          <p className="kicker"><Sparkles size={15}/> Tarifs</p>
+          <h2>Choisissez le rythme <span>qui vous convient.</span></h2>
+          <p>Quatre formules, de la découverte gratuite à la génération en gros volume. Les prix sont indicatifs et peuvent évoluer selon le coût réel de génération.</p>
+        </div>
+        <div className="landing-pricing-grid">
+          {plans.map((plan) => {
+            const fcfa = Number(plan.features.price_fcfa || 0);
+            return <article key={plan.code} className={`landing-plan ${plan.code === 'PREMIUM_30_BACKUP' ? 'featured' : ''}`}>
+              {plan.code === 'PREMIUM_30_BACKUP' && <span className="landing-plan-flag">Le plus choisi</span>}
+              <p className="landing-plan-kicker">{String(plan.features.highlight || ({ FREE: 'Gratuit', PREMIUM_15: 'Premium', PREMIUM_30_BACKUP: 'Premium', PREMIUM_30_UNLIMITED: 'Premium' } as Record<string, string>)[plan.code] || 'Premium')}</p>
+              <h3>{plan.name}</h3>
+              <p className="landing-plan-desc">{plan.description}</p>
+              <div className="landing-plan-price">
+                <strong>{planPrice(plan)}</strong>
+                <span>{fcfa > 0 ? `≈ ${new Intl.NumberFormat('fr-FR').format(fcfa)} FCFA` : '0 FCFA'}</span>
+              </div>
+              <ul>
+                {planBullets(plan).map((bullet) => <li key={bullet}><Check size={14}/> {bullet}</li>)}
+              </ul>
+              <Link to="/register" className={`button ${plan.code === 'PREMIUM_30_BACKUP' ? 'primary' : 'secondary'} landing-plan-cta`}>
+                {plan.price === 0 ? 'Commencer gratuitement' : 'Choisir cette formule'}
+              </Link>
+            </article>;
+          })}
+        </div>
+        <p className="landing-pricing-note">
+          La formule gratuite inclut les vidéos jusqu’à 2 h 30. Au-delà, un abonnement Premium est demandé ; ensuite, aucune limite de durée par vidéo n’est appliquée.
+        </p>
       </section>
 
       <section id="langues" className="landing-langs">

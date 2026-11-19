@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 import app.models  # noqa: F401 - enregistre tous les modèles SQLAlchemy
 from app.api.v1.router import api_router
+from app.core.bootstrap import bootstrap_admin_data
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import engine
@@ -22,12 +23,16 @@ def _ensure_schema() -> None:
         return
 
     with engine.begin() as connection:
-        connection.execute(
-            text(
-                "ALTER TABLE projects "
-                "ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE"
-            )
-        )
+        for statement in (
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(30) DEFAULT 'user' NOT NULL",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true NOT NULL",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER DEFAULT 0 NOT NULL",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0 NOT NULL",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP WITH TIME ZONE",
+            "ALTER TABLE projects ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE",
+            "ALTER TABLE plans ALTER COLUMN is_archived SET DEFAULT false",
+        ):
+            connection.execute(text(statement))
         connection.execute(
             text(
                 "ALTER TABLE settings "
@@ -64,6 +69,8 @@ def _ensure_schema() -> None:
                 "WHERE filename LIKE '%/%'"
             )
         )
+
+    bootstrap_admin_data()
 
 
 async def _cleanup_loop() -> None:

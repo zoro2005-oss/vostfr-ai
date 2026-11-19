@@ -79,6 +79,7 @@ Connexion pgAdmin :
 | `GROQ_AUDIO_CHUNK_SECONDS` | Durée des découpes audio pour les longues vidéos |
 | `TRANSLATION_API_URL` | API de traduction compatible LibreTranslate (optionnel) |
 | `TRANSLATION_API_KEY` | Clé de l'API de traduction (optionnel) |
+| `ADMIN_EMAIL` | E-mail du compte promu `super_admin` au démarrage (bootstrap non destructif) |
 
 Avec `TRANSCRIPTION_PROVIDER=groq` et `TRANSLATION_PROVIDER=groq`, tout passe en ligne via
 Groq : aucun GPU n'est utilisé et les longues vidéos sont automatiquement découpées en
@@ -106,3 +107,40 @@ automatiquement sur Whisper local (CPU) et Google Translate.
 | DELETE | `/api/projects/{id}` | Supprime le projet |
 
 Toutes les routes `/api/projects` nécessitent l'en-tête `Authorization: Bearer <token>`.
+
+`GET /api/plans` expose publiquement les forfaits actifs (4 formules : gratuit, 15 jours, 30 jours avec sauvegarde, 30 jours illimité) et leurs métadonnées de prix. Le gratuit inclut 150 min par vidéo ; les formules Premium n'ont aucune limite de durée.
+
+## Administration (`/api/admin`)
+
+Toutes les routes admin exigent un JWT valide et un rôle administrateur. Les permissions sont vérifiées côté serveur dans `app/core/permissions.py` ; `super_admin` possède toutes les permissions, les autres rôles ont un périmètre limité.
+
+| Rôle | Périmètre principal |
+|---|---|
+| `super_admin` | Tout, y compris sécurité, création d’administrateurs et révocation de sessions |
+| `admin` | Utilisateurs, générations, langues, forfaits, paiements, crédits, activités, notifications, support, analyses, paramètres, promotions |
+| `finance` | Forfaits, paiements, crédits, promotions, analyses, activités |
+| `support` | Utilisateurs, générations, support, notifications, activités |
+| `tech` | Générations, langues, paramètres, analyses, surveillance technique |
+
+Routes principales :
+
+- Session et pilotage : `POST /login` (formulaire admin, 403 pour un compte non-admin), `GET /me`, `GET /overview`, `GET /analytics`, `GET /monitoring`
+- Utilisateurs : `GET/PATCH/DELETE /users`, `POST /users/{id}/credits`, `POST /users/{id}/subscription`, `POST /users/{id}/reset`
+- Générations : `GET /projects`, `GET /projects/{id}`, `POST /projects/{id}/retry`, `POST /projects/{id}/cancel`
+- Commerce : `/plans`, `/transactions`, `/revenue`, `/credits`, `/promo-codes`, `/invoices`
+- Configuration : `/languages`, `/engines`, `/settings`, `/secrets`, `/data-requests`
+- Sécurité : `/admins`, `/assignees`, `/admins/{id}/logout`, `/security/logs`
+- Communication : `/notifications`, `/tickets`, `/tickets/{id}/messages`, `/messages`
+- Traçabilité : `GET /activity` et table `audit_logs`
+
+Le premier compte administrateur est promu automatiquement au démarrage si `ADMIN_EMAIL` est défini. Pour un compte déjà existant :
+
+```bash
+.venv/bin/python seed_admin.py mon.email@exemple.com super_admin
+```
+
+Le frontend correspondant est servi sur `http://localhost:5173/admin_ai`.
+
+## Remboursement et journal d’audit
+
+`POST /api/admin/transactions/{id}/refund` marque la transaction comme remboursée et écrit une entrée dans `audit_logs` avec le montant et le motif. Les modifications de crédits, rôles, forfaits, paramètres, secrets, notifications, tickets et codes promos sont également journalisées avec l’administrateur auteur, la cible et les détails de l’action.

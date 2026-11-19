@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     GROQ_MAX_AUDIO_BYTES: int = 24 * 1024 * 1024
     GROQ_AUDIO_CHUNK_SECONDS: int = 300
     FRONTEND_URL: str = "http://localhost:5173"
+    ADMIN_EMAIL: str = ""
     PASSWORD_RESET_EXPIRE_MINUTES: int = 30
     EXPOSE_RESET_URL: bool = False
     SMTP_HOST: str = ""

@@ -1,10 +1,10 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, UploadCloud, Film, History, Settings, LogOut, Search, Bell, Sun, Moon, Home, CheckCircle2, LoaderCircle, AlertCircle, Clock3, BellOff } from 'lucide-react';
+import { LayoutDashboard, UploadCloud, Film, History, Settings, LogOut, Search, Bell, Sun, Moon, Home, CheckCircle2, LoaderCircle, AlertCircle, Clock3, BellOff, ShieldCheck, CreditCard } from 'lucide-react';
 import Logo from './Logo';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePreloader } from '../contexts/PreloaderContext';
-import { api, clearSession, endpoints, getStoredUser } from '../services/api';
+import { api, clearSession, endpoints, getStoredUser, saveStoredUser } from '../services/api';
 import type { Project } from '../types';
 import { projectName } from '../utils/slug';
 
@@ -13,6 +13,7 @@ const items = [
   ['/new', 'Nouvelle traduction', UploadCloud],
   ['/translations', 'Mes traductions', Film],
   ['/history', 'Historique', History],
+  ['/abonnement', 'Abonnement', CreditCard],
   ['/settings', 'Paramètres', Settings]
 ] as const;
 
@@ -21,6 +22,8 @@ const mobileTabs = [
   ['/new', 'Traduire', UploadCloud],
   ['/translations', 'Mes films', Film]
 ] as const;
+
+const ADMIN_ROLES = ['super_admin', 'admin', 'finance', 'support', 'tech'];
 
 type NotificationItem = {
   id: number;
@@ -81,6 +84,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
   const { show } = usePreloader();
   const user = getStoredUser();
   const displayName = user?.full_name || user?.email || 'Mon espace';
+  const [isAdmin, setIsAdmin] = useState(() => ADMIN_ROLES.includes(String(user?.role || '')));
   const initials = (user?.full_name || user?.email || '?')
     .split(/[\s@.]+/)
     .filter(Boolean)
@@ -103,6 +107,23 @@ export default function Layout({ children }: { children?: ReactNode }) {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [confirmLogout]);
+
+  useEffect(() => {
+    let active = true;
+    api.get<{ id: number; email: string; full_name?: string; role?: string }>(endpoints.me)
+      .then(({ data }) => {
+        if (!active) return;
+        setIsAdmin(ADMIN_ROLES.includes(String(data.role || '')));
+        saveStoredUser({
+          id: data.id,
+          email: data.email,
+          full_name: data.full_name || getStoredUser()?.full_name,
+          role: data.role
+        });
+      })
+      .catch(() => { if (active) setIsAdmin(false); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -164,6 +185,9 @@ export default function Layout({ children }: { children?: ReactNode }) {
         {items.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
           <Icon size={18}/><span>{label}</span>{label === 'Nouvelle traduction' && <span className="shortcut">⌘ K</span>}
         </NavLink>)}
+        {isAdmin && <NavLink to="/admin_ai" className={({ isActive }) => isActive ? 'nav-item active admin-nav' : 'nav-item admin-nav'}>
+          <ShieldCheck size={18}/><span>Administration</span>
+        </NavLink>}
       </nav>
       <div className="sidebar-bottom">
         <div className="storage">
@@ -178,6 +202,8 @@ export default function Layout({ children }: { children?: ReactNode }) {
       <header className="topbar">
         <div><p className="eyebrow">VOSTFR AI / WORKSPACE</p><h1>{title}</h1></div>
         <div className="top-actions">
+          <Link to="/abonnement" className="icon-btn" aria-label="Abonnement" title="Abonnement"><CreditCard size={18}/></Link>
+          {isAdmin && <Link to="/admin_ai" className="icon-btn admin-icon" aria-label="Administration" title="Administration"><ShieldCheck size={18}/></Link>}
           <Link to="/settings" className="icon-btn" aria-label="Paramètres" title="Paramètres"><Settings size={18}/></Link>
           <div className="search"><Search size={17}/><input placeholder="Rechercher..." aria-label="Rechercher" /></div>
           <div className="notif-wrap" ref={notifRef}>

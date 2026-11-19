@@ -127,6 +127,8 @@ svg{display:block}
 .nav-item:hover{color:var(--text);background:rgba(255,255,255,.07)}
 .nav-item.active{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.12)}
 .nav-item svg{flex-shrink:0}
+.admin-nav{margin-top:6px}
+.admin-nav svg{color:var(--accent)}
 .shortcut{
   margin-left:auto;font-size:10px;font-weight:600;color:var(--text-2);
   background:rgba(255,255,255,.08);border:1px solid var(--glass-border);
@@ -165,6 +167,7 @@ svg{display:block}
 }
 .icon-btn:hover{transform:translateY(-2px);background:rgba(255,255,255,.12)}
 .icon-btn:active{transform:scale(.97)}
+.admin-icon{color:var(--accent)}
 .notif{position:absolute;top:11px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px rgba(7,7,17,.8)}
 .notif-wrap{position:relative}
 .notif-popover{position:absolute;top:calc(100% + 12px);right:0;width:340px;max-width:min(340px,calc(100vw - 32px));border-radius:20px;border:1px solid var(--glass-border);background:rgba(15,15,30,.97);backdrop-filter:blur(24px);box-shadow:0 24px 60px rgba(0,0,0,.45);z-index:60;overflow:hidden;animation:fadeUp .18s ease}
@@ -1466,6 +1469,35 @@ button.setting-nav{width:100%;border:0;background:transparent;font:inherit;text-
 .landing-feature h3{margin:0 0 8px;font-size:16px;font-weight:700;letter-spacing:-.2px}
 .landing-feature p{margin:0;font-size:13.5px;line-height:1.55;color:var(--text-2)}
 
+.landing-pricing-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:stretch}
+.landing-plan{
+  position:relative;display:flex;flex-direction:column;
+  padding:24px;border-radius:24px;
+  background:var(--glass);border:1px solid var(--glass-border);
+  backdrop-filter:blur(20px);
+  transition:transform .25s,border-color .25s,box-shadow .25s;
+}
+.landing-plan:hover{transform:translateY(-4px);border-color:rgba(167,155,255,.4)}
+.landing-plan.featured{border-color:rgba(167,155,255,.55);box-shadow:0 24px 60px -30px rgba(124,92,255,.75);transform:translateY(-6px)}
+.landing-plan.featured:hover{transform:translateY(-9px)}
+.landing-plan-flag{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  padding:5px 12px;border-radius:999px;white-space:nowrap;
+  font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;
+  color:#fff;background:var(--grad);box-shadow:0 10px 24px -10px rgba(124,92,255,.9);
+}
+.landing-plan-kicker{margin:0 0 10px;font-size:10.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent)}
+.landing-plan h3{margin:0;font-size:17px;font-weight:750;letter-spacing:-.3px;line-height:1.25}
+.landing-plan-desc{margin:10px 0 0;font-size:12.5px;line-height:1.55;color:var(--text-2)}
+.landing-plan-price{display:flex;flex-direction:column;gap:2px;margin:20px 0 18px;padding-bottom:18px;border-bottom:1px solid var(--glass-border)}
+.landing-plan-price strong{font-size:28px;font-weight:850;letter-spacing:-1px}
+.landing-plan-price span{font-size:12px;color:var(--text-2)}
+.landing-plan ul{list-style:none;margin:0 0 22px;padding:0;display:grid;gap:9px;flex:1}
+.landing-plan li{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;line-height:1.5;color:var(--text-2)}
+.landing-plan li svg{flex-shrink:0;margin-top:2px;color:var(--accent)}
+.landing-plan-cta{margin-top:auto;width:100%;justify-content:center}
+.landing-pricing-note{margin:24px auto 0;max-width:780px;text-align:center;font-size:12px;line-height:1.6;color:var(--text-2)}
+
 .landing-how{max-width:920px;margin:0 auto}
 .landing-steps{list-style:none;margin:0;padding:0;display:grid;gap:14px}
 .landing-steps li{
@@ -1536,6 +1568,9 @@ button.setting-nav{width:100%;border:0;background:transparent;font:inherit;text-
 
 @media(max-width:1100px){
   .landing-features{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .landing-pricing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .landing-plan.featured{transform:none}
+  .landing-plan.featured:hover{transform:translateY(-4px)}
 }
 @media(max-width:900px){
   .landing{padding:88px 18px 40px}
@@ -1552,12 +1587,70 @@ button.setting-nav{width:100%;border:0;background:transparent;font:inherit;text-
 }
 @media(max-width:560px){
   .landing-features{grid-template-columns:1fr}
+  .landing-pricing-grid{grid-template-columns:1fr}
   .landing-stats{grid-template-columns:1fr}
   .landing-cta{flex-direction:column;align-items:stretch}
   .landing-cta .button{width:100%}
   .landing-actions .button.primary{padding:0 14px}
   .landing-steps li{gap:14px;padding:18px}
   .landing-step-number{font-size:22px}
+}
+
+.subscription-page{display:grid;gap:22px}
+.subscription-notice{display:flex;align-items:flex-start;gap:9px;margin:0;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,159,10,.3);background:rgba(255,159,10,.1);color:var(--orange);font-size:12.5px;line-height:1.55}
+.subscription-notice svg{flex-shrink:0;margin-top:1px}
+.subscription-state{min-height:50vh;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text-2);font-size:13px}
+.subscription-state.error{color:var(--red)}
+.subscription-current{padding:26px}
+.subscription-current-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.subscription-current-head h2{margin:6px 0 8px;font-size:26px;font-weight:800;letter-spacing:-.8px}
+.subscription-current-head p:not(.eyebrow){margin:0;max-width:560px;font-size:13px;line-height:1.6;color:var(--text-2)}
+.subscription-status{padding:7px 13px;border-radius:999px;white-space:nowrap;font-size:11px;font-weight:700;background:rgba(255,255,255,.07);border:1px solid var(--glass-border);color:var(--text-2)}
+.subscription-status.active{background:rgba(48,209,88,.12);border-color:rgba(48,209,88,.25);color:var(--green)}
+.subscription-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:24px}
+.subscription-metrics>div{padding:14px 15px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--glass-border)}
+.subscription-metrics span{display:block;font-size:11px;color:var(--text-2)}
+.subscription-metrics strong{display:block;margin-top:6px;font-size:15px;font-weight:750}
+.subscription-quota{margin-top:20px}
+.subscription-quota-label{display:flex;justify-content:space-between;margin-bottom:8px;font-size:11px;color:var(--text-2)}
+.subscription-fairuse{display:flex;align-items:center;gap:8px;margin:18px 0 0;font-size:12px;line-height:1.5;color:var(--accent)}
+.subscription-catalog-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:8px 2px 0}
+.subscription-catalog-head h3{margin:6px 0 0;font-size:24px;font-weight:800;letter-spacing:-.7px}
+.subscription-catalog-head>span{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text-2)}
+.subscription-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.subscription-card{position:relative;display:flex;flex-direction:column;padding:22px;border-radius:22px;background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(20px);transition:transform .2s,border-color .2s}
+.subscription-card:hover{transform:translateY(-3px);border-color:rgba(167,155,255,.4)}
+.subscription-card.current{border-color:rgba(167,155,255,.6);box-shadow:0 20px 50px -32px rgba(124,92,255,.9)}
+.subscription-card.featured{background:linear-gradient(160deg,rgba(124,92,255,.12),rgba(255,255,255,.02))}
+.subscription-flag{position:absolute;top:-11px;left:20px;padding:5px 11px;border-radius:999px;font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#fff;background:var(--grad)}
+.subscription-current-badge{position:absolute;top:16px;right:16px;display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:700;color:var(--green);background:rgba(48,209,88,.12);border:1px solid rgba(48,209,88,.25)}
+.subscription-card-kicker{margin:0 0 10px;font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--accent)}
+.subscription-card h4{margin:0;font-size:16px;font-weight:750;letter-spacing:-.3px;line-height:1.3}
+.subscription-card-desc{margin:9px 0 0;font-size:12px;line-height:1.55;color:var(--text-2)}
+.subscription-card-price{display:flex;flex-direction:column;gap:2px;margin:18px 0;padding-bottom:16px;border-bottom:1px solid var(--glass-border)}
+.subscription-card-price strong{font-size:25px;font-weight:850;letter-spacing:-.8px}
+.subscription-card-price span{font-size:11px;color:var(--text-2)}
+.subscription-card ul{list-style:none;margin:0 0 20px;padding:0;display:grid;gap:8px;flex:1}
+.subscription-card li{display:flex;align-items:flex-start;gap:7px;font-size:12px;line-height:1.5;color:var(--text-2)}
+.subscription-card li svg{flex-shrink:0;margin-top:2px;color:var(--accent)}
+.subscription-cta{width:100%;justify-content:center;margin-top:auto}
+.subscription-note{margin:-6px 2px 0;text-align:center;font-size:11.5px;line-height:1.6;color:var(--text-2)}
+.subscription-help{display:flex;align-items:center;gap:18px;padding:20px 24px}
+.subscription-help>svg{color:var(--accent);flex-shrink:0}
+.subscription-help h3{margin:0 0 4px;font-size:16px;font-weight:750}
+.subscription-help p{margin:0;font-size:12.5px;line-height:1.55;color:var(--text-2)}
+.subscription-help .button{margin-left:auto;flex-shrink:0}
+[data-theme="light"] .subscription-metrics>div{background:rgba(20,22,60,.04)}
+@media(max-width:1100px){
+  .subscription-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .subscription-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:640px){
+  .subscription-grid{grid-template-columns:1fr}
+  .subscription-current-head{flex-direction:column}
+  .subscription-catalog-head{align-items:flex-start;flex-direction:column}
+  .subscription-help{flex-direction:column;align-items:flex-start}
+  .subscription-help .button{margin-left:0;width:100%}
 }
 
 /* ---------- Auth modal ---------- */

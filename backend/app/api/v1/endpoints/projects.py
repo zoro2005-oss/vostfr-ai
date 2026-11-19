@@ -1,19 +1,35 @@
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
 from fastapi.responses import FileResponse
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
 from app.models.project import Project
 from app.models.subtitle import Subtitle
+from app.models.admin import Plan, Subscription
 from app.core.config import settings
 from app.core.paths import audio_file_path, subtitle_file_path, video_file_path
+from app.tasks.process import probe_duration
 
 router = APIRouter()
+FREE_VIDEO_LIMIT_MINUTES = 150.0
+
+
+def current_plan(db: Session, user_id: int) -> Plan | None:
+    now = datetime.now(timezone.utc)
+    subscription = db.query(Subscription).filter(
+        Subscription.user_id == user_id,
+        Subscription.status == "active",
+        or_(Subscription.ends_at.is_(None), Subscription.ends_at >= now),
+    ).order_by(Subscription.id.desc()).first()
+    if subscription:
+        return db.get(Plan, subscription.plan_id)
+    return db.query(Plan).filter(Plan.code == "FREE").first()
 
 @router.post("/upload")
 async def upload_video(
@@ -40,6 +56,18 @@ async def upload_video(
                 if size > settings.MAX_UPLOAD_SIZE:
                     raise HTTPException(status_code=413, detail="Fichier trop volumineux")
                 buffer.write(chunk)
+
+        plan = current_plan(db, current_user.id)
+        if not plan or plan.code == "FREE":
+            limit_minutes = float(plan.video_max_minutes or FREE_VIDEO_LIMIT_MINUTES) if plan else FREE_VIDEO_LIMIT_MINUTES
+            if (probe_duration(file_path) or 0) > limit_minutes * 60:
+                raise HTTPException(
+                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                    detail=(
+                        f"Votre vidéo dépasse {int(limit_minutes)} minutes. "
+                        "Cette durée est réservée aux formules Premium : passez à Premium pour traiter toutes vos vidéos sans limite de durée."
+                    ),
+                )
     except HTTPException:
         if os.path.exists(file_path):
             os.remove(file_path)

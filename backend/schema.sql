@@ -125,4 +125,15 @@ WHERE filename LIKE '%/%';
 -- 6. Préférences de notifications par utilisateur.
 ALTER TABLE settings ADD COLUMN IF NOT EXISTS notifications JSON DEFAULT '{}'::json;
 
+-- 7. Espace administrateur : rôles, crédits et sessions.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(30) DEFAULT 'user' NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP WITH TIME ZONE;
+
+-- Les tables de l'espace admin (plans, abonnements, transactions, journal,
+-- notifications, tickets, codes promo, secrets API, paramètres globaux…) sont
+-- créées automatiquement par SQLAlchemy au démarrage de l'API.
+
 COMMIT;

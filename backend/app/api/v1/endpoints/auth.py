@@ -4,10 +4,12 @@ from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.deps import get_current_user
+from app.core.permissions import ADMIN_ROLES
 from app.core.security import (
     create_access_token,
     generate_password_reset_token,
@@ -17,6 +19,7 @@ from app.core.security import (
 )
 from app.db.session import get_db
 from app.models.password_reset_token import PasswordResetToken
+from app.models.admin import AuditLog, Plan, Subscription
 from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -130,13 +133,14 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     user = User(
         email=user_in.email,
         full_name=user_in.full_name,
-        password_hash=get_password_hash(user_in.password)
+        password_hash=get_password_hash(user_in.password),
+        role="super_admin" if settings.ADMIN_EMAIL and user_in.email.lower() == settings.ADMIN_EMAIL.lower() else "user",
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    access_token = create_access_token(data={"sub": str(user.id)})
+    access_token = create_access_token(data={"sub": str(user.id), "ver": user.token_version})
     return {"access_token": access_token, "token_type": "bearer", "user": UserResponse.model_validate(user)}
 
 
@@ -149,7 +153,17 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
             detail="Email ou mot de passe incorrect",
         )
 
-    access_token = create_access_token(data={"sub": str(user.id)})
+    user.last_active_at = datetime.now(timezone.utc)
+    if user.role in ADMIN_ROLES:
+        db.add(AuditLog(
+            admin_id=user.id,
+            action="admin.login",
+            target_type="user",
+            target_id=str(user.id),
+            details={"email": user.email},
+        ))
+    db.commit()
+    access_token = create_access_token(data={"sub": str(user.id), "ver": user.token_version})
     return {"access_token": access_token, "token_type": "bearer", "user": UserResponse.model_validate(user)}
 
 
@@ -237,6 +251,71 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/me/subscription")
+def get_my_subscription(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    def serialize_plan(plan: Plan | None) -> dict:
+        if not plan:
+            return {
+                "code": "FREE",
+                "name": "Gratuit",
+                "price": 0.0,
+                "currency": "USD",
+                "duration_days": 30,
+                "generation_limit": 3,
+                "video_max_minutes": 150.0,
+                "backup_enabled": False,
+                "retention_minutes": 120,
+                "features": {},
+            }
+        return {
+            "code": plan.code,
+            "name": plan.name,
+            "price": float(plan.price or 0),
+            "currency": plan.currency,
+            "duration_days": plan.duration_days,
+            "generation_limit": plan.generation_limit,
+            "video_max_minutes": plan.video_max_minutes,
+            "backup_enabled": plan.backup_enabled,
+            "retention_minutes": plan.retention_minutes,
+            "features": plan.features or {},
+        }
+
+    now = datetime.now(timezone.utc)
+    subscription = db.query(Subscription).filter(
+        Subscription.user_id == current_user.id,
+        Subscription.status == "active",
+        or_(Subscription.ends_at.is_(None), Subscription.ends_at >= now),
+    ).order_by(Subscription.id.desc()).first()
+
+    if not subscription:
+        free_plan = db.query(Plan).filter(Plan.code == "FREE").first()
+        return {
+            "plan": "FREE",
+            "plan_name": free_plan.name if free_plan else "Gratuit",
+            "subscription_status": "none",
+            "subscription_ends_at": None,
+            "starts_at": None,
+            "auto_renew": False,
+            "generations_used": 0,
+            "plan_details": serialize_plan(free_plan),
+        }
+
+    plan = db.query(Plan).filter(Plan.id == subscription.plan_id).first()
+    return {
+        "plan": plan.code if plan else "ACTIVE",
+        "plan_name": plan.name if plan else "Formule active",
+        "subscription_status": subscription.status,
+        "subscription_ends_at": subscription.ends_at.isoformat() if subscription.ends_at else None,
+        "starts_at": subscription.starts_at.isoformat() if subscription.starts_at else None,
+        "auto_renew": subscription.auto_renew,
+        "generations_used": subscription.generations_used,
+        "plan_details": serialize_plan(plan),
+    }
 
 
 @router.put("/me", response_model=UserResponse)

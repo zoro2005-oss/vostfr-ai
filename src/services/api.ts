@@ -19,9 +19,17 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       sessionStorage.removeItem('vostfr_token');
       sessionStorage.removeItem('vostfr_user');
-      if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
+      if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register') && !window.location.pathname.startsWith('/admin_ai')) {
         window.location.href = '/login';
       }
+    }
+    if (error.response?.status === 402) {
+      const detail = error.response.data?.detail;
+      sessionStorage.setItem(
+        'subscription_notice',
+        typeof detail === 'string' ? detail : 'Passez à une formule Premium pour traiter vos vidéos sans limite de durée.'
+      );
+      if (!window.location.pathname.startsWith('/abonnement')) window.location.href = '/abonnement';
     }
     return Promise.reject(error);
   }
@@ -33,6 +41,8 @@ export const endpoints = {
   forgotPassword: '/api/auth/forgot-password',
   resetPassword: '/api/auth/reset-password',
   me: '/api/auth/me',
+  mySubscription: '/api/auth/me/subscription',
+  plans: '/api/plans',
   updateMe: '/api/auth/me',
   changePassword: '/api/auth/change-password',
   settings: '/api/settings',
@@ -62,7 +72,7 @@ export function clearSession() {
   sessionStorage.removeItem('vostfr_user');
 }
 
-export function saveStoredUser(user: { id: number; email: string; full_name?: string }) {
+export function saveStoredUser(user: { id: number; email: string; full_name?: string; role?: string }) {
   sessionStorage.setItem('vostfr_user', JSON.stringify(user));
 }
 
@@ -70,7 +80,7 @@ export function getStoredUser() {
   const raw = sessionStorage.getItem('vostfr_user');
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as { id: number; email: string; full_name?: string };
+    return JSON.parse(raw) as { id: number; email: string; full_name?: string; role?: string };
   } catch {
     return null;
   }
